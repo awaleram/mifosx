@@ -129,4 +129,9 @@ public class GuarantorFundingDetails extends AbstractPersistable<Long> {
             fundingTransaction.reverseTransaction();
         }
     }
+    
+    public void addSelfAmmount(final BigDecimal amount){
+    	      // this.amountReleased = getAmountReleased().add(amount);
+           this.amountRemaining = getAmountRemaining().add(amount);
+    }
 }
