@@ -66,9 +66,12 @@ public class SavingsApiConstants {
     public static final String approvedOnDateParamName = "approvedOnDate";
     public static final String activatedOnDateParamName = "activatedOnDate";
     public static final String closedOnDateParamName = "closedOnDate";
+    
+  
 
     public static final String activeParamName = "active";
     public static final String nameParamName = "name";
+  
     public static final String shortNameParamName = "shortName";
     public static final String descriptionParamName = "description";
     public static final String currencyCodeParamName = "currencyCode";
@@ -96,6 +99,7 @@ public class SavingsApiConstants {
     public static final String receiptNumberParamName = "receiptNumber";
     public static final String bankNumberParamName = "bankNumber";
     public static final String allowOverdraftParamName = "allowOverdraft";
+    public static final String releaseGuarantorFundParamName = "releaseguarantor";
     public static final String overdraftLimitParamName = "overdraftLimit";
     public static final String minRequiredBalanceParamName = "minRequiredBalance";
     public static final String enforceMinRequiredBalanceParamName = "enforceMinRequiredBalance";
@@ -162,7 +166,7 @@ public class SavingsApiConstants {
             SAVINGS_PRODUCT_ACCOUNTING_PARAMS.OVERDRAFT_PORTFOLIO_CONTROL.getValue(),
             SAVINGS_PRODUCT_ACCOUNTING_PARAMS.LOSSES_WRITTEN_OFF.getValue(),
             SAVINGS_PRODUCT_ACCOUNTING_PARAMS.INCOME_FROM_INTEREST.getValue(), allowOverdraftParamName, overdraftLimitParamName,
-            minRequiredBalanceParamName, enforceMinRequiredBalanceParamName, minBalanceForInterestCalculationParamName));
+            minRequiredBalanceParamName, enforceMinRequiredBalanceParamName, minBalanceForInterestCalculationParamName, releaseGuarantorFundParamName));
 
     /**
      * These parameters will match the class level parameters of
@@ -186,7 +190,7 @@ public class SavingsApiConstants {
             lockinPeriodFrequencyTypeParamName,
             // withdrawalFeeAmountParamName, withdrawalFeeTypeParamName,
             withdrawalFeeForTransfersParamName, feeAmountParamName, feeOnMonthDayParamName, chargesParamName, allowOverdraftParamName,
-            overdraftLimitParamName, minRequiredBalanceParamName, enforceMinRequiredBalanceParamName));
+            overdraftLimitParamName, minRequiredBalanceParamName, enforceMinRequiredBalanceParamName, releaseGuarantorFundParamName));
 
     /**
      * These parameters will match the class level parameters of
