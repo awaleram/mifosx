@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.LocalDate;
 import org.mifosplatform.infrastructure.core.data.EnumOptionData;
@@ -273,7 +272,8 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
         public String schema() {
             return this.schemaSql;
         }
-
+        
+        
         @Override
         public SavingsAccountData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
@@ -469,6 +469,9 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
         }
     }
 
+    
+   
+ 
     @Override
     public SavingsAccountData retrieveTemplate(final Long clientId, final Long groupId, final Long productId,
             final boolean staffInSelectedOfficeOnly) {

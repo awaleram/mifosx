@@ -21,7 +21,7 @@ import org.mifosplatform.portfolio.charge.data.ChargeData;
  */
 public class SavingsAccountData {
 
-    private final Long id;
+	private final Long id;
     private final String accountNo;
     private final EnumOptionData depositType;
     private final String externalId;
@@ -452,7 +452,7 @@ public class SavingsAccountData {
     public CurrencyData currency() {
         return this.currency;
     }
-
+  
     @Override
     public boolean equals(final Object obj) {
 

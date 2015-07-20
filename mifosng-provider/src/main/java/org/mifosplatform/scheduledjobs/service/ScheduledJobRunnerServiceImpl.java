@@ -6,6 +6,8 @@
 package org.mifosplatform.scheduledjobs.service;
 
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -15,6 +17,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.mifosplatform.infrastructure.core.data.ApiParameterError;
+import org.mifosplatform.infrastructure.core.data.EnumOptionData;
 import org.mifosplatform.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.mifosplatform.infrastructure.core.service.DateUtils;
 import org.mifosplatform.infrastructure.core.service.RoutingDataSourceServiceFactory;
@@ -22,9 +25,13 @@ import org.mifosplatform.infrastructure.core.service.ThreadLocalContextUtil;
 import org.mifosplatform.infrastructure.jobs.annotation.CronTarget;
 import org.mifosplatform.infrastructure.jobs.exception.JobExecutionException;
 import org.mifosplatform.infrastructure.jobs.service.JobName;
+import org.mifosplatform.portfolio.charge.data.ChargeData;
+import org.mifosplatform.portfolio.charge.service.ChargeReadPlatformService;
+import org.mifosplatform.portfolio.common.domain.PeriodFrequencyType;
 import org.mifosplatform.portfolio.savings.DepositAccountType;
 import org.mifosplatform.portfolio.savings.DepositAccountUtils;
 import org.mifosplatform.portfolio.savings.data.DepositAccountData;
+import org.mifosplatform.portfolio.savings.data.SavingIdListData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountAnnualFeeData;
 import org.mifosplatform.portfolio.savings.service.DepositAccountReadPlatformService;
 import org.mifosplatform.portfolio.savings.service.DepositAccountWritePlatformService;
@@ -49,18 +56,19 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     private final SavingsAccountChargeReadPlatformService savingsAccountChargeReadPlatformService;
     private final DepositAccountReadPlatformService depositAccountReadPlatformService;
     private final DepositAccountWritePlatformService depositAccountWritePlatformService;
-
+    private final ChargeReadPlatformService chargeReadPlatformService;
     @Autowired
     public ScheduledJobRunnerServiceImpl(final RoutingDataSourceServiceFactory dataSourceServiceFactory,
             final SavingsAccountWritePlatformService savingsAccountWritePlatformService,
             final SavingsAccountChargeReadPlatformService savingsAccountChargeReadPlatformService,
             final DepositAccountReadPlatformService depositAccountReadPlatformService,
-            final DepositAccountWritePlatformService depositAccountWritePlatformService) {
+            final DepositAccountWritePlatformService depositAccountWritePlatformService, final ChargeReadPlatformService chargeReadPlatformService) {
         this.dataSourceServiceFactory = dataSourceServiceFactory;
         this.savingsAccountWritePlatformService = savingsAccountWritePlatformService;
         this.savingsAccountChargeReadPlatformService = savingsAccountChargeReadPlatformService;
         this.depositAccountReadPlatformService = depositAccountReadPlatformService;
         this.depositAccountWritePlatformService = depositAccountWritePlatformService;
+        this.chargeReadPlatformService = chargeReadPlatformService;
     }
 
     @Transactional
@@ -295,7 +303,7 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
         logger.info(ThreadLocalContextUtil.getTenant().getName() + ": Deposit accounts affected by update: " + depositAccounts.size());
     }
 
-    @Override
+	@Override
     @CronTarget(jobName = JobName.GENERATE_RD_SCEHDULE)
     public void generateRDSchedule() {
         final JdbcTemplate jdbcTemplate = new JdbcTemplate(this.dataSourceServiceFactory.determineDataSourceService().retrieveDataSource());
@@ -350,5 +358,140 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
         }
 
     }
-
+	 
+    @Override
+    @CronTarget(jobName = JobName.APPY_SAVING_DEPOSITE_LATE_FEE)
+    public void doAppySavingLateFeeCharge() throws JobExecutionException{
+    	PeriodFrequencyType frequencyType = null;
+       
+        String startingDate = new String();
+    	String endingDate = new String();
+    	SimpleDateFormat formateDate = new SimpleDateFormat("yyyy-MM-dd");  
+    	
+        final JdbcTemplate jdbcTemplate = new JdbcTemplate(this.dataSourceServiceFactory.determineDataSourceService().retrieveDataSource());
+    	    
+    	final Collection<ChargeData> chargeData = this.chargeReadPlatformService.retriveAllChargeOfSavingLateFee();
+    	for(final ChargeData oneCharge : chargeData){
+    		int interval = oneCharge.getFeeInterval();
+    		int month = frequencyType.MONTHS.getValue();
+    		int week = frequencyType.WEEKS.getValue();
+    		EnumOptionData data = oneCharge.getFeeFrequency();
+    		     Long frequency = data.getId();
+    	    Calendar aCalendar = Calendar.getInstance();     
+    		
+    		if(month == frequency){
+    			
+    			//added -1 for current month
+    			aCalendar.add(Calendar.MONTH, -interval);
+    			aCalendar.set(Calendar.DATE, 1);
+    			Date startDate = aCalendar.getTime();
+    			startingDate = formateDate.format(startDate);
+    			// set actual maximum date of previous month
+    			
+    			if(interval==1){
+    				aCalendar.set(Calendar.DATE,aCalendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+        			Date endDate = aCalendar.getTime();	
+        			endingDate = formateDate.format(endDate);
+    			}
+    			
+    			else{
+    			aCalendar.add(Calendar.MONTH,interval-1);
+    			aCalendar.set(Calendar.DATE, 1);
+    			aCalendar.set(Calendar.DATE,aCalendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+    			Date endDate = aCalendar.getTime();	
+    			endingDate = formateDate.format(endDate);
+    			}	
+    		}
+    	    else if(week == frequency){
+    			aCalendar.add(Calendar.WEEK_OF_MONTH, -interval);
+    			aCalendar.set(Calendar.DATE, 1);
+    			Date startDate = aCalendar.getTime();
+    			startingDate = formateDate.format(startDate);
+    			
+    			aCalendar.set(Calendar.DATE, aCalendar.getActualMaximum(Calendar.DAY_OF_WEEK));
+    			Date endDate = aCalendar.getTime();
+    			endingDate = formateDate.format(endDate);
+    		}
+    		
+    		final Collection<SavingIdListData> savingIdsInCharge = this.savingsAccountChargeReadPlatformService.retriveAllSavingIdHavingDepositCharge(startingDate, endingDate);
+        	final Collection<SavingIdListData> savingIds = this.savingsAccountChargeReadPlatformService.retriveSavingAccountForApplySavingDepositeFee(startingDate, endingDate);
+    			for(final SavingIdListData savingId : savingIds ){
+    			
+                 boolean isInsert = true;
+                for(final SavingIdListData savingData : savingIdsInCharge){
+                	if(savingId.getSavingId().equals(savingData.getSavingId())){
+                		isInsert = false;
+                	}
+                }
+               
+                if(isInsert==true){
+                	
+                String insertSql = " INSERT INTO `m_savings_account_charge` (`savings_account_id`, `charge_id`, `is_penalty`, `charge_time_enum`, "
+                            + " `charge_due_date`, `fee_on_month`, `fee_on_day`, `fee_interval`, `charge_calculation_enum`, `calculation_percentage`, " 
+                            + " `calculation_on_amount`, `amount`, `amount_paid_derived`, `amount_waived_derived`, `amount_writtenoff_derived`, "
+                            + " `amount_outstanding_derived`, `is_paid_derived`, `waived`, `is_active`, `inactivated_on_date`) VALUES ";
+                
+                StringBuilder sb = new StringBuilder();
+               // String chargeDueDate = formatterWithTime.print(DateUtils.getLocalDateTimeOfTenant());
+                final Long savingAccId = savingId.getSavingId();
+                final Long chargId = oneCharge.getId();
+                final BigDecimal amount = oneCharge.getAmount();
+                final Date dueDate = new Date();
+                final LocalDate chargeDueDate = new LocalDate(dueDate);
+                
+                sb.append("(");
+                sb.append(savingAccId);
+                sb.append(",");
+                sb.append(chargId);
+                sb.append(",");
+                sb.append("0");
+                sb.append(",");
+                sb.append("12");
+                sb.append(",'");
+                sb.append(formatter.print(chargeDueDate));
+                sb.append("',");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("1");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append(amount);
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(",");
+                sb.append(amount);
+                sb.append(",");
+                sb.append("0");
+                sb.append(",");
+                sb.append("0");
+                sb.append(",");
+                sb.append("1");
+                sb.append(",");
+                sb.append("NULL");
+                sb.append(")");
+                
+                if (sb.length() > 0) {
+                   jdbcTemplate.update(insertSql + sb.toString());
+                }
+                	
+                	
+                }
+    		    		    
+    		}
+    		
+    	}
+    	
+    }	
+	
 }

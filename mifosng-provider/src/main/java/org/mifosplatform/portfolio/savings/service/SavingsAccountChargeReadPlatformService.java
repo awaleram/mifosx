@@ -6,10 +6,14 @@
 package org.mifosplatform.portfolio.savings.service;
 
 import java.util.Collection;
+import java.util.Date;
 
+import org.joda.time.LocalDate;
 import org.mifosplatform.portfolio.charge.data.ChargeData;
+import org.mifosplatform.portfolio.savings.data.SavingIdListData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountAnnualFeeData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountChargeData;
+import org.mifosplatform.portfolio.savings.data.SavingsAccountData;
 
 public interface SavingsAccountChargeReadPlatformService {
 
@@ -22,4 +26,7 @@ public interface SavingsAccountChargeReadPlatformService {
     Collection<SavingsAccountAnnualFeeData> retrieveChargesWithAnnualFeeDue();
 
     Collection<SavingsAccountAnnualFeeData> retrieveChargesWithDue();
+    Collection<SavingIdListData> retriveAllSavingIdHavingDepositCharge(String startDate, String endDate);
+    Collection<SavingIdListData> retriveSavingAccountForApplySavingDepositeFee(final String startDateofMonth, final String endDateOfMonth);
+
 }

@@ -64,6 +64,10 @@ public class ChargeEnumerations {
                 optionData = new EnumOptionData(ChargeTimeType.OVERDRAFT_FEE.getValue().longValue(),
                         ChargeTimeType.OVERDRAFT_FEE.getCode(), "Overdraft Fee");
             break;
+            case LATE_DEPOSITE_FEE:
+            	optionData = new EnumOptionData(ChargeTimeType.LATE_DEPOSITE_FEE.getValue().longValue(),
+            			ChargeTimeType.LATE_DEPOSITE_FEE.getCode(), "Savings Late Fee");
+            	break;
             default:
                 optionData = new EnumOptionData(ChargeTimeType.INVALID.getValue().longValue(), ChargeTimeType.INVALID.getCode(), "Invalid");
             break;

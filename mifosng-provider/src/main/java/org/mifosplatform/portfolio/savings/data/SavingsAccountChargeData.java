@@ -145,4 +145,8 @@ public class SavingsAccountChargeData {
     public boolean isAnnualFee() {
         return ChargeTimeType.fromInt(this.chargeTimeType.getId().intValue()).isAnnualFee();
     }
+
+	public Long getAccountId() {
+		return this.accountId;
+	}
 }

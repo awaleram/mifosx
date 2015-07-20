@@ -6,15 +6,22 @@
 package org.mifosplatform.portfolio.savings.service;
 
 import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
+import org.joda.time.LocalDate;
 import org.mifosplatform.infrastructure.core.service.Page;
 import org.mifosplatform.infrastructure.core.service.SearchParameters;
 import org.mifosplatform.portfolio.savings.DepositAccountType;
+import org.mifosplatform.portfolio.savings.data.SavingIdListData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountTransactionData;
 
 public interface SavingsAccountReadPlatformService {
 
+	//Collection<SavingsAccountData> retriveSavingAccountForApplySavingDepositeFee(final String startDateofMonth, final String endDateOfMonth);
+	
     Page<SavingsAccountData> retrieveAll(SearchParameters searchParameters);
 
     Collection<SavingsAccountData> retrieveAllForLookup(Long clientId);

@@ -358,5 +358,16 @@ public class ChargeReadPlatformServiceImpl implements ChargeReadPlatformService 
         return this.jdbcTemplate.query(sql, rm, new Object[] { ChargeAppliesTo.SAVINGS.getValue(), savingsAccountId });
 
     }  
+    
+    @Override
+    public Collection<ChargeData> retriveAllChargeOfSavingLateFee(){
+		
+    	final ChargeMapper rm = new ChargeMapper();
+    	
+    	String sql = "select " + rm.chargeSchema() + " where c.charge_time_enum =12 and c.is_deleted=0 and c.is_active=1 ";
+    	
+    	return this.jdbcTemplate.query(sql, rm, new Object[]{});
+    	
+    }
 
 }
