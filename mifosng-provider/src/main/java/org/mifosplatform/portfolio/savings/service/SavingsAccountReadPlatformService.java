@@ -19,8 +19,6 @@ import org.mifosplatform.portfolio.savings.data.SavingsAccountData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountTransactionData;
 
 public interface SavingsAccountReadPlatformService {
-
-	//Collection<SavingsAccountData> retriveSavingAccountForApplySavingDepositeFee(final String startDateofMonth, final String endDateOfMonth);
 	
     Page<SavingsAccountData> retrieveAll(SearchParameters searchParameters);
 
@@ -42,4 +40,6 @@ public interface SavingsAccountReadPlatformService {
     SavingsAccountTransactionData retrieveSavingsTransaction(Long savingsId, Long transactionId, DepositAccountType depositAccountType);
 
     Collection<SavingsAccountData> retrieveForLookup(Long clientId, Boolean overdraft);
+    
+   
 }

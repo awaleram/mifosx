@@ -7,6 +7,7 @@ package org.mifosplatform.portfolio.savings.service;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.joda.time.LocalDate;
 import org.mifosplatform.portfolio.charge.data.ChargeData;
@@ -14,6 +15,7 @@ import org.mifosplatform.portfolio.savings.data.SavingIdListData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountAnnualFeeData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountChargeData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountData;
+import org.mifosplatform.portfolio.savings.data.SavingsIdOfChargeData;
 
 public interface SavingsAccountChargeReadPlatformService {
 
@@ -26,7 +28,10 @@ public interface SavingsAccountChargeReadPlatformService {
     Collection<SavingsAccountAnnualFeeData> retrieveChargesWithAnnualFeeDue();
 
     Collection<SavingsAccountAnnualFeeData> retrieveChargesWithDue();
-    Collection<SavingIdListData> retriveAllSavingIdHavingDepositCharge(String startDate, String endDate);
-    Collection<SavingIdListData> retriveSavingAccountForApplySavingDepositeFee(final String startDateofMonth, final String endDateOfMonth);
+    Collection<SavingsIdOfChargeData> retriveAllSavingIdHavingDepositCharge(String startDate, String endDate,  Long frequency);
+    Collection<SavingIdListData> retriveSavingAccountForApplySavingDepositeFee(final String startDateofMonth, final String endDateOfMonth,  Long frequency);
 
+    Collection<SavingIdListData> retriveAllSavingIdForApplyDepositeLateCharge();
+    SavingsIdOfChargeData retriveOneWithMaxOfDueDate(Long savingId);
+    
 }
