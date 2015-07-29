@@ -402,12 +402,7 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     	    	cal.add(Calendar.DATE, -interval);
     	    	Date startDate = cal.getTime();
     			startingDate = formateDate.format(startDate);
-    			
-    			aCalendar.add(Calendar.DATE, -1);
-    			Date endDate = aCalendar.getTime();
-    			endingDate = formateDate.format(endDate);
-    	    	
-    	    	
+    				
     	    }
     	    
     	    
@@ -418,28 +413,8 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     			aCalendar.set(Calendar.DATE, 1);
     			Date startDate = aCalendar.getTime();
     			startingDate = formateDate.format(startDate);
-    			
-    			
-    			
-    			
-    			
-    			// set actual maximum date of previous month
-    			if(interval==1){
-    				aCalendar.set(Calendar.DATE,aCalendar.getActualMaximum(Calendar.DAY_OF_MONTH));
-        			Date endDate = aCalendar.getTime();	
-        			endingDate = formateDate.format(endDate);
-    			}
-    			
-    			else{
-    			aCalendar.add(Calendar.MONTH, interval-1);
-    			aCalendar.set(Calendar.DATE, 1);
-    			aCalendar.set(Calendar.DATE,aCalendar.getActualMaximum(Calendar.DAY_OF_MONTH));
-    			Date endDate = aCalendar.getTime();	
-    			endingDate = formateDate.format(endDate);
-    			
-    			}
-    			
     		}
+    	    
     	    else if(week == frequency){
     	    	
     	    	/** this function takes the starting date of previous week based on interval
@@ -448,17 +423,6 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                 aCalendar.add(Calendar.WEEK_OF_YEAR, -interval);
     	        Date startDate =aCalendar.getTime();
     	        startingDate = formateDate.format(startDate);
-    	        
-    	        /** this function takes the ending date of last week
-    	         */
-    	       
-    	        Calendar cal = Calendar.getInstance();
-                cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-                cal.add(Calendar.DATE, -7);
-                cal.add(Calendar.DATE, 6);
-    	        Date endDate = cal.getTime();
-    	        endingDate = formateDate.format(endDate);
-    	    	
     		}
     		
     	
@@ -476,15 +440,7 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     	    	cal.set(Calendar.DATE, 1);
     	    	Date startDate = cal.getTime();
     	    	startingDate = formateDate.format(startDate);
-    	    	
-    	    	
-    	    	// below code take the 1 of April in current year
-    	    	aCalendar.set(currentYear, previousMonth, 1);
-    	    	aCalendar.set(Calendar.DATE, 1);
-    	    	Date endDate = aCalendar.getTime();
-    	    	endingDate = formateDate.format(endDate);
-    	    	
-    	    	
+    	    
     	    }
     		
     	    final Collection<SavingIdListData> savingIdList = this.savingsAccountChargeReadPlatformService.retriveAllSavingIdForApplyDepositeLateCharge();
@@ -531,12 +487,30 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     					   }
     					 
     		    		   LocalDate startFeeChargeDate = savingId.getStartFeeChargeDate();
+    		    		 
+    		    		   if(isMaxOfChargeDue==true){
+    		    			   if(dateOfTransaction.isAfter(maxOfchargeDueDate) || dateOfTransaction.equals(maxOfChargeDueDate)){
+    		    				   startFeeChargeDate = dateOfTransaction;
+    		    			   }
+    		    			   else{
+    		    				   startFeeChargeDate = maxOfchargeDueDate;
+    		    			   }
+    		    		    }else if(dateOfTransaction.isAfter(startFeeChargeDate)){
+    		    		    	startFeeCharge = dateOfTransaction.toDate();
+    		    		    }
+    		    		    else{
+    		    		    	startFeeCharge = startFeeChargeDate.toDate();
+    		    		    }
     		    		   
-    		    		   if(dateOfTransaction.isAfter(startFeeChargeDate) || dateOfTransaction.equals(startFeeChargeDate)){
+    		    		   /*  
+    		    		   if(dateOfTransaction.isAfter(startFeeChargeDate) || dateOfTransaction.equals(startFeeChargeDate) && dateOfTransaction.isAfter(maxOfchargeDueDate)){
     		    			   startFeeCharge = dateOfTransaction.toDate();
-    		    		   }else{
-    		    			   startFeeCharge = startFeeChargeDate.toDate();
+    		    		   }else if(maxOfchargeDueDate.isAfter(dateOfTransaction)){
+    		    			   startFeeCharge = maxOfchargeDueDate.toDate();    		    			   
     		    		   }
+    		    		   else{
+    		    			   startFeeCharge = startFeeChargeDate.toDate();
+    		    		   }*/
     		    		  
     					   break;
     				   }
@@ -554,7 +528,9 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                     	}
                     }
     			 
-    			 
+    			 /**
+    			  * if there is no any single transaction of saving account then this work
+    			  */
     			   if(isSavingIdAvailable==false && isInsert == true &&  isValideForCharge== true){
     				   LocalDate startFeeChargeDate = savingId.getStartFeeChargeDate();
     				   startFeeCharge = startFeeChargeDate.toDate();
@@ -596,10 +572,10 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
     			   * */
     			  
     			  
-    			  Days daydiff = Days.daysBetween(transaction, startFee);
+    			  Days daydiff = Days.daysBetween(startFee, transaction);
     			  int totalDiff = daydiff.getDays();
     			  
-    			  if(totalDiff>=0){
+    			  if(totalDiff>0){ // removed equal for test
     				  isPriviousDueDate = false;
     				  start  = new DateTime(startFee);
     				  Date endDateAsCurrDate = new Date();
@@ -634,7 +610,7 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                       }
                       else if(frequency==1){
                     	    Weeks diffInWeek = Weeks.weeksBetween(start,end);
-                    	    totalNoOfInsertion = (diffInWeek.getWeeks()-1)/interval;    	  
+                    	    totalNoOfInsertion = (diffInWeek.getWeeks()-1)/interval; //modify the code removed the -1   	  
                       }
                       else if(frequency==2){
                     	    Months diffMonth = Months.monthsBetween(start,end);
@@ -678,53 +654,46 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                     	}
                     	else{
             	    	aCalendar.add(Calendar.DATE, interval);
-            	    	Date nextMonthFirstDay = aCalendar.getTime();
-            	        aCalendar.setTime(nextMonthFirstDay);
-                        chargeDueDate = new LocalDate(nextMonthFirstDay);
+            	    	Date nextDay = aCalendar.getTime();
+            	        aCalendar.setTime(nextDay);
+                        chargeDueDate = new LocalDate(nextDay);
                     	}
                     }
                     
                     else if(frequency == 1){
-                    	
-                    	if(interval>1){
-                    		aCalendar.add(Calendar.WEEK_OF_MONTH,interval+1);
-                        	aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-                            aCalendar.add(Calendar.DATE, -7);
-                            aCalendar.add(Calendar.DATE, 6);
-                            
-                            Date nextMonthFirstDay = aCalendar.getTime();
-                            aCalendar.setTime(nextMonthFirstDay);
-                            chargeDueDate = new LocalDate(nextMonthFirstDay);
-                    	}
-                    	else{
-                    	aCalendar.add(Calendar.WEEK_OF_MONTH,interval);
-                    	aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                        
+    /*                	if(interval>1){
+    */                	   	
+                    	aCalendar.add(Calendar.WEEK_OF_MONTH,interval+1);
+                    	                    	aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
                         aCalendar.add(Calendar.DATE, -7);
-                        aCalendar.add(Calendar.DATE, 6);
+                        aCalendar.add(Calendar.DATE, 7); 
+                        
+                        Date nextWeekFirstDay = aCalendar.getTime();
+                        aCalendar.setTime(nextWeekFirstDay);
+                        chargeDueDate = new LocalDate(nextWeekFirstDay);
+                   /*  }
+                    	else{
+                    		aCalendar.add(Calendar.WEEK_OF_MONTH,interval);
+	                    	aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                            aCalendar.add(Calendar.DATE, -7);
+                            aCalendar.add(Calendar.DATE, 7); 
+    
+                            Date nextWeekFirstDay = aCalendar.getTime();
+                            aCalendar.setTime(nextWeekFirstDay);
+                            chargeDueDate = new LocalDate(nextWeekFirstDay);
+                    	}
+    */                	
+                    }
+                    else if(frequency == 2){
+                    	
+                        aCalendar.add(Calendar.MONTH,interval);
+                        aCalendar.set(Calendar.DATE, aCalendar.getActualMinimum(Calendar.DAY_OF_MONTH));
                         
                         Date nextMonthFirstDay = aCalendar.getTime();
                         aCalendar.setTime(nextMonthFirstDay);
                         chargeDueDate = new LocalDate(nextMonthFirstDay);
-                        }
-                           
-                    }
-                    else if(frequency == 2){
-                    	if(interval>1){
-                    		  aCalendar.add(Calendar.MONTH,interval);
-                              aCalendar.set(Calendar.DATE, aCalendar.getActualMinimum(Calendar.DAY_OF_MONTH));
-                              Date nextMonthFirstDay = aCalendar.getTime();
-                              aCalendar.setTime(nextMonthFirstDay);
-                              chargeDueDate = new LocalDate(nextMonthFirstDay);
-                    	}
-                    	else{
-                      	
-                        aCalendar.add(Calendar.MONTH,interval);
-                        aCalendar.set(Calendar.DATE, aCalendar.getActualMinimum(Calendar.DAY_OF_MONTH));
-                        Date nextMonthFirstDay = aCalendar.getTime();
-                        aCalendar.setTime(nextMonthFirstDay);
-                        chargeDueDate = new LocalDate(nextMonthFirstDay);
-                    	}
-                  
+                    	
                     }
                     
                     else if(frequency == 3){
@@ -734,24 +703,30 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                 	    	int previousMonth = 3 ;
                 	    	aCalendar.set(currentYear+(interval+1) , previousMonth, 1);
                 	    	aCalendar.set(Calendar.DATE, 1);
-                	    	Date nextMonthFirstDay = aCalendar.getTime();
-                	    	aCalendar.setTime(nextMonthFirstDay);
-                            chargeDueDate = new LocalDate(nextMonthFirstDay);
+                	    	
+                	    	Date nextYearDay = aCalendar.getTime();
+                	    	aCalendar.setTime(nextYearDay);
+                            chargeDueDate = new LocalDate(nextYearDay);
                     	}
                     	else{
                     	int currentYear = aCalendar.get(Calendar.YEAR);
             	    	int previousMonth = 3 ;
             	    	aCalendar.set(currentYear+interval , previousMonth, 1);
             	    	aCalendar.set(Calendar.DATE, 1);
-            	    	Date nextMonthFirstDay = aCalendar.getTime();
-            	    	aCalendar.setTime(nextMonthFirstDay);
-                        chargeDueDate = new LocalDate(nextMonthFirstDay);
+            	    	Date nextYearDay = aCalendar.getTime();
+            	    	aCalendar.setTime(nextYearDay);
+                        chargeDueDate = new LocalDate(nextYearDay);
                       }
                     }
                     
                        
                    }
+                  
+                  
+                // in this if there is no any previous due date then calendar is going to set on availbale date  
+                  
                  else{
+                	                 	 
                 	 aCalendar.setTime(startFeeCharge);
                 	
                 	 if(frequency == 0){
@@ -764,22 +739,34 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                      }
                      
                      else if(frequency == 1){
-                     	aCalendar.add(Calendar.WEEK_OF_MONTH,interval);
-                     	aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                    	/* if(interval>1){*/
+                     	 aCalendar.add(Calendar.WEEK_OF_MONTH, interval+1);
+                       	 aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
                          aCalendar.add(Calendar.DATE, -7);
-                         aCalendar.add(Calendar.DATE, 6);
+                         aCalendar.add(Calendar.DATE, 7);
                          
                          Date nextMonthFirstDay = aCalendar.getTime();
                          aCalendar.setTime(nextMonthFirstDay);
                          chargeDueDate = new LocalDate(nextMonthFirstDay);
-                            
+                    	/* }
+                    	 else{
+                    		 aCalendar.add(Calendar.WEEK_OF_MONTH,interval);  //modify for test
+                    		 aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                             aCalendar.add(Calendar.DATE, -7);
+                             aCalendar.add(Calendar.DATE, 7);
+                             
+                             Date nextMonthFirstDay = aCalendar.getTime();
+                             aCalendar.setTime(nextMonthFirstDay);
+                             chargeDueDate = new LocalDate(nextMonthFirstDay);
+                    	 }*/
                      }
                      else if(frequency == 2){
-                     aCalendar.add(Calendar.MONTH,interval); // modify this giving error while setting time
+                     aCalendar.add(Calendar.MONTH,interval); 
                      aCalendar.set(Calendar.DATE, aCalendar.getActualMinimum(Calendar.DAY_OF_MONTH));
                      Date nextMonthFirstDay = aCalendar.getTime();
                      aCalendar.setTime(nextMonthFirstDay);
                      chargeDueDate = new LocalDate(nextMonthFirstDay);
+                     
                      }
                      
                      else if(frequency == 3){
@@ -811,10 +798,12 @@ public class ScheduledJobRunnerServiceImpl implements ScheduledJobRunnerService 
                          }
                 
                        else if(frequency == 1){
+                    	   
+                    	                    	   
                 	            aCalendar.add(Calendar.WEEK_OF_MONTH,interval);
                 	            aCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
                                 aCalendar.add(Calendar.DATE, -7);
-                                aCalendar.add(Calendar.DATE, 6);
+                                aCalendar.add(Calendar.DATE, 7 ); ///changed done here
                     
                                 Date nextMonthFirstDay = aCalendar.getTime();
                                 aCalendar.setTime(nextMonthFirstDay);
