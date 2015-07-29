@@ -48,7 +48,11 @@ public class LoanAccountData {
 
     // basic loan details
 
-    // identity
+    public Long getId() {
+		return this.id;
+	}
+
+	// identity
     private final Long id;
     private final String accountNo;
     private final String externalId;
@@ -1387,4 +1391,5 @@ public class LoanAccountData {
         return LoanStatus.fromInt(this.status.id().intValue()).isActive();
     }
 
+	
 }

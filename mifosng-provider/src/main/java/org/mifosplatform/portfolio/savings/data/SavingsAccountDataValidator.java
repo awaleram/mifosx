@@ -191,6 +191,11 @@ public class SavingsAccountDataValidator {
                     .ignoreIfNull().validateForBooleanValue();
         }
 
+        if(this.fromApiJsonHelper.parameterExists("releaseguarantor", element)){
+        	final Boolean isReleaseGuarantor =  this.fromApiJsonHelper.extractBooleanNamed("releaseguarantor", element);
+        	baseDataValidator.reset().parameter("releaseguarantor").value(isReleaseGuarantor).ignoreIfNull().validateForBooleanValue();
+        }
+        
         validateSavingsCharges(element, baseDataValidator);
 
         validateOverdraftParams(baseDataValidator, element);

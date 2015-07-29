@@ -116,6 +116,7 @@ public class SavingsProductReadPlatformServiceImpl implements SavingsProductRead
             sqlBuilder.append("sp.overdraft_limit as overdraftLimit, ");
             sqlBuilder.append("sp.min_required_balance as minRequiredBalance, ");
             sqlBuilder.append("sp.enforce_min_required_balance as enforceMinRequiredBalance, ");
+            sqlBuilder.append(" sp.release_guarantor as releaseguarantor, ");
             sqlBuilder.append("sp.min_balance_for_interest_calculation as minBalanceForInterestCalculation,");
             sqlBuilder.append("sp.accounting_type as accountingType ");
             sqlBuilder.append("from m_savings_product sp ");
@@ -177,6 +178,8 @@ public class SavingsProductReadPlatformServiceImpl implements SavingsProductRead
 
             final boolean withdrawalFeeForTransfers = rs.getBoolean("withdrawalFeeForTransfers");
             final boolean allowOverdraft = rs.getBoolean("allowOverdraft");
+            
+            final boolean releaseguarantor = rs.getBoolean("releaseguarantor");
             final BigDecimal overdraftLimit = rs.getBigDecimal("overdraftLimit");
 
             final BigDecimal minRequiredBalance = rs.getBigDecimal("minRequiredBalance");
@@ -187,7 +190,7 @@ public class SavingsProductReadPlatformServiceImpl implements SavingsProductRead
                     compoundingInterestPeriodType, interestPostingPeriodType, interestCalculationType, interestCalculationDaysInYearType,
                     minRequiredOpeningBalance, lockinPeriodFrequency, lockinPeriodFrequencyType, withdrawalFeeForTransfers,
                     accountingRuleType, allowOverdraft, overdraftLimit, minRequiredBalance, enforceMinRequiredBalance,
-                    minBalanceForInterestCalculation);
+                    minBalanceForInterestCalculation, releaseguarantor);
         }
     }
 
