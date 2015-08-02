@@ -1,5 +1,6 @@
 package org.mifosplatform.portfolio.investment.domain;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,19 +37,33 @@ public class Investment extends AbstractPersistable<Long> {
     @Column(name = "loan_id", nullable = false)
     private Long loanId;
     
+    @Column(name = "invested_amount", scale = 6, precision = 19, nullable = true)
+    private Long investedAmount;
+    
     protected Investment() {
         //
     }
 
    
-    public Investment(Long savingId, Long loanId) {
+    public Investment(Long savingId, Long loanId, Long investedAmount) {
         // super();
         this.savingId = savingId;
         this.loanId = loanId;
+        this.investedAmount = investedAmount;
     }
 
     
-    public Long getSavingId() {
+    public Long getInvestedAmount() {
+		return this.investedAmount;
+	}
+
+
+	public void setInvestedAmount(Long investedAmount) {
+		this.investedAmount = investedAmount;
+	}
+
+
+	public Long getSavingId() {
         return this.savingId;
     }
 

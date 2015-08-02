@@ -8,13 +8,15 @@ public class LoanInvestmentData {
     final String accountno;
     final Long savingamount;
     final String productname;
-    public LoanInvestmentData(Long saving_id, String name, String accountno, Long savingamount, String productname) {
+    final Long investedAmount;
+    public LoanInvestmentData(Long saving_id, String name, String accountno, Long savingamount, String productname, Long investedAmount) {
         super();
         this.saving_id = saving_id;
         this.name = name;
         this.accountno = accountno;
         this.savingamount = savingamount;
         this.productname = productname;
+        this.investedAmount = investedAmount;
     }
     
     public Long getSaving_id() {
@@ -37,8 +39,12 @@ public class LoanInvestmentData {
         return this.productname;
     }
    
-    public static LoanInvestmentData intance (Long saving_id, String name, String accountno, Long savingamount,
-            String productname){
-        return new LoanInvestmentData(saving_id, name, accountno, savingamount, productname);
+    public Long getInvestedAmount() {
+		return this.investedAmount;
+	}
+
+	public static LoanInvestmentData intance (Long saving_id, String name, String accountno, Long savingamount,
+            String productname, Long investedAmount){
+        return new LoanInvestmentData(saving_id, name, accountno, savingamount, productname, investedAmount);
     }
 }

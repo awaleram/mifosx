@@ -1,5 +1,6 @@
 package org.mifosplatform.portfolio.investment.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,9 +49,13 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
 
         final Long savingId = command.longValueOfParameterNamed("savingId");
         final String[] loanIds = command.arrayValueOfParameterNamed("loanId");
+        final String[] investedAmounts = command.arrayValueOfParameterNamed("investedAmounts");
+        final List<Long> investedAmount = new ArrayList<Long>();
         final List<Long> loanId = new ArrayList<Long>();
         List<Long> existingLoanIds = new ArrayList<Long>();
         List<Long> newLoanIds = new ArrayList<Long>();
+        List<Long> newInvestedAmount = new ArrayList<Long>();
+        Long totalAmount = null;
 
         Long id = null;
 
@@ -59,12 +64,18 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
                 id = Long.parseLong(Id);
                 loanId.add(id);
             }
+            for(String investment : investedAmounts){
+                totalAmount = Long.parseLong(investment);
+                
+                investedAmount.add(totalAmount);
+              }
         }
 
         existingLoanIds = this.savingInvestment.retriveLoanIdBySavingId(savingId);
 
         if (existingLoanIds.isEmpty()) {
             newLoanIds = loanId;
+            newInvestedAmount = investedAmount;
 
         }
 
@@ -80,6 +91,7 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
 
                 if (count == 0) {
                     newLoanIds.add(loanId.get(i));
+                    newInvestedAmount.add(investedAmount.get(i));
                 }
 
             }
@@ -87,7 +99,7 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
 
         for (int i = 0; i < newLoanIds.size(); i++) {
 
-            Investment savingInvestment = new Investment(savingId, newLoanIds.get(i));
+            Investment savingInvestment = new Investment(savingId, newLoanIds.get(i), newInvestedAmount.get(i));
             this.repositoryWrapper.save(savingInvestment);
 
         }
@@ -101,16 +113,27 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
 
         Long loanid = command.longValueOfParameterNamed("loanId");
         final String[] savingIds = command.arrayValueOfParameterNamed("savingId");
+        final String[] investedAmounts = command.arrayValueOfParameterNamed("investedAmounts");
+        final List<Long> investedAmount = new ArrayList<Long>();
         final List<Long> savingId = new ArrayList<Long>();
         List<Long> existingSavingId = new ArrayList<Long>();
         List<Long> newSavingId = new ArrayList<Long>();
-        
+        List<Long> newInvestedAmount = new ArrayList<Long>();        
         Long id = null;
+        BigDecimal amount = null;
+        Long totalAmount = null;
         if (savingIds != null) {
             for (String Id : savingIds) {
 
                 id = Long.parseLong(Id);
                 savingId.add(id);
+                
+                
+            }
+            for(String investment : investedAmounts){
+              totalAmount = Long.parseLong(investment);
+              
+              investedAmount.add(totalAmount);
             }
         }
 
@@ -132,6 +155,7 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
 
                 if (count == 0) {
                     newSavingId.add(savingId.get(i));
+                    newInvestedAmount.add(investedAmount.get(i));
                 }
 
             }
@@ -142,7 +166,7 @@ public class InvestmentWritePlatformServiceRepositoryImpl implements InvestmentW
         
         for (int i = 0; i < newSavingId.size(); i++) {
 
-            Investment savingInvestment = new Investment(newSavingId.get(i), loanid);
+            Investment savingInvestment = new Investment(newSavingId.get(i), loanid, newInvestedAmount.get(i));
             this.repositoryWrapper.save(savingInvestment);
 
         }
