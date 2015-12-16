@@ -68,6 +68,11 @@ public class ChargeEnumerations {
                 optionData = new EnumOptionData(ChargeTimeType.TRANCHE_DISBURSEMENT.getValue().longValue(),
                         ChargeTimeType.TRANCHE_DISBURSEMENT.getCode(), "Tranche Disbursement");
             break;
+            case LOAN_APPLICATION_FEE:
+            	optionData = new EnumOptionData(ChargeTimeType.LOAN_APPLICATION_FEE.getValue().longValue(),
+            			ChargeTimeType.LOAN_APPLICATION_FEE.getCode(), "Loan Application Fee");
+            break;
+            
             default:
                 optionData = new EnumOptionData(ChargeTimeType.INVALID.getValue().longValue(), ChargeTimeType.INVALID.getCode(), "Invalid");
             break;
@@ -127,6 +132,11 @@ public class ChargeEnumerations {
             	optionData = new EnumOptionData(ChargeCalculationType.PERCENT_OF_DISBURSEMENT_AMOUNT.getValue().longValue(),
             	        ChargeCalculationType.PERCENT_OF_DISBURSEMENT_AMOUNT.getCode(), "% Disbursement Amount");
             break;
+            
+            case PERCENT_OF_PRINCIPALE_AMOUNT:
+            	optionData = new EnumOptionData(ChargeCalculationType.PERCENT_OF_PRINCIPALE_AMOUNT.getValue().longValue(),
+            			ChargeCalculationType.PERCENT_OF_PRINCIPALE_AMOUNT.getCode(), "% Principal Proposed Amount");
+             break;	
             default:
                 optionData = new EnumOptionData(ChargeCalculationType.INVALID.getValue().longValue(),
                         ChargeCalculationType.INVALID.getCode(), "Invalid");

@@ -163,6 +163,12 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
         return new LoanTransaction(null, office, LoanTransactionType.REPAYMENT_AT_DISBURSEMENT, paymentDetail, amount.getAmount(),
                 paymentDate, externalId, createdDate, appUser);
     }
+    
+    public static LoanTransaction loanApplicationFeeCharge(final Loan loan, final Office office, final Money amount, final PaymentDetail paymentDetail,
+    		final LocalDate paymentDate, final String externalId, final LocalDateTime createDate, final AppUser appUser){
+    	return new LoanTransaction(loan,office, LoanTransactionType.CHARGE_PAYMENT, paymentDetail, amount.getAmount(),
+    			paymentDate, externalId, createDate, appUser);
+    }
 
     public static LoanTransaction waiver(final Office office, final Loan loan, final Money amount, final LocalDate waiveDate,
             final Money waived, final Money unrecognizedPortion, final LocalDateTime createdDate, final AppUser appUser) {

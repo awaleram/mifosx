@@ -19,6 +19,7 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.LocalDate;
+import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.mifosplatform.accounting.journalentry.service.JournalEntryWritePlatformService;
@@ -76,6 +77,7 @@ import org.mifosplatform.portfolio.calendar.exception.CalendarParameterUpdateNot
 import org.mifosplatform.portfolio.charge.domain.Charge;
 import org.mifosplatform.portfolio.charge.domain.ChargePaymentMode;
 import org.mifosplatform.portfolio.charge.domain.ChargeRepositoryWrapper;
+import org.mifosplatform.portfolio.charge.domain.ChargeTimeType;
 import org.mifosplatform.portfolio.charge.exception.ChargeCannotBeUpdatedException;
 import org.mifosplatform.portfolio.charge.exception.LoanChargeCannotBeAddedException;
 import org.mifosplatform.portfolio.charge.exception.LoanChargeCannotBeDeletedException;
@@ -115,6 +117,7 @@ import org.mifosplatform.portfolio.loanaccount.domain.DefaultLoanLifecycleStateM
 import org.mifosplatform.portfolio.loanaccount.domain.Loan;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanCharge;
+import org.mifosplatform.portfolio.loanaccount.domain.LoanChargePaidBy;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanChargeRepository;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanDisbursementDetails;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanEvent;
@@ -1781,10 +1784,40 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         final Loan loan = this.loanAssembler.assembleFrom(loanId);
         checkClientOrGroupActive(loan);
         final LoanCharge loanCharge = retrieveLoanChargeBy(loanId, loanChargeId);
+        AppUser currentUser = getAppUserIfPresent();
 
+        if(!loan.status().isActive() && ChargeTimeType.LOAN_APPLICATION_FEE.getValue().equals(loanCharge.getChargeTime())){
+        	
+        	BigDecimal chargeAmount = loanCharge.amountOutstanding();
+        	
+            Money disbursentMoney = Money.of(loan.getCurrency(), chargeAmount);
+        		  
+        	final LocalDate paymentDate = command.localDateValueOfParameterNamed("transactionDate");
+        	final Integer installmentNumber = command.integerValueOfParameterNamed("installmentNumber");
+        	final LocalDateTime newDate = new LocalDateTime();
+        	final LoanTransaction chargePayment = LoanTransaction.loanApplicationFeeCharge(loan, loan.getOffice(), disbursentMoney, null, paymentDate, null, newDate, currentUser);
+             
+        	if(!loanCharge.isFullyPaid()){
+        	
+            if(chargeAmount.intValue() > 0 ){
+            	loanCharge.markAsFullyPaid();
+            	final LoanChargePaidBy loanChargePaidBy = new LoanChargePaidBy(chargePayment, loanCharge, chargeAmount, installmentNumber);
+            	chargePayment.getLoanChargesPaid().add(loanChargePaidBy);
+            }        
+            this.loanTransactionRepository.saveAndFlush(chargePayment);
+            this.loanChargeRepository.save(loanCharge);
+        	}else{
+        		throw new LoanChargeCannotBePayedException(
+                        LOAN_CHARGE_CANNOT_BE_PAYED_REASON.ALREADY_PAID, loanCharge.getId());
+        	}
+        }
+        
+      
+        
         // Charges may be waived only when the loan associated with them are
         // active
-        if (!loan.status().isActive()) { throw new LoanChargeCannotBePayedException(LOAN_CHARGE_CANNOT_BE_PAYED_REASON.LOAN_INACTIVE,
+        else{
+    	  if (!loan.status().isActive()) { throw new LoanChargeCannotBePayedException(LOAN_CHARGE_CANNOT_BE_PAYED_REASON.LOAN_INACTIVE,
                 loanCharge.getId()); }
 
         // validate loan charge is not already paid or waived
@@ -1836,6 +1869,9 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 AccountTransferType.CHARGE_PAYMENT.getValue(), null, null, null, null, null, fromSavingsAccount, isRegularTransaction,
                 isExceptionForBalanceCheck);
         this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
+       
+      }
+        
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
                 .withEntityId(loanChargeId) //
@@ -1843,8 +1879,11 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 .withClientId(loan.getClientId()) //
                 .withGroupId(loan.getGroupId()) //
                 .withLoanId(loanId) //
-                .withSavingsId(portfolioAccountData.accountId()).build();
-    }
+                .build();
+      
+           
+        
+    }      
 
     public void disburseLoanToSavings(final Loan loan, final JsonCommand command, final Money amount, final PaymentDetail paymentDetail) {
 

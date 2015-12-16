@@ -19,7 +19,8 @@ public enum ChargeTimeType {
     OVERDUE_INSTALLMENT(9, "chargeTimeType.overdueInstallment"), // only for
     OVERDRAFT_FEE(10, "chargeTimeType.overdraftFee"),// only for savings
     WEEKLY_FEE(11, "chargeTimeType.weeklyFee"), // only for savings
-    TRANCHE_DISBURSEMENT(12,"chargeTimeType.tranchedisbursement"); // only for loan
+    TRANCHE_DISBURSEMENT(12,"chargeTimeType.tranchedisbursement"),
+    LOAN_APPLICATION_FEE(13,"chargeTimeType.loanapplicationfee"); // only for loan
 
     private final Integer value;
     private final String code;
@@ -39,7 +40,8 @@ public enum ChargeTimeType {
 
     public static Object[] validLoanValues() {
         return new Integer[] { ChargeTimeType.DISBURSEMENT.getValue(), ChargeTimeType.SPECIFIED_DUE_DATE.getValue(),
-                ChargeTimeType.INSTALMENT_FEE.getValue(), ChargeTimeType.OVERDUE_INSTALLMENT.getValue(), ChargeTimeType.TRANCHE_DISBURSEMENT.getValue() };
+                ChargeTimeType.INSTALMENT_FEE.getValue(), ChargeTimeType.OVERDUE_INSTALLMENT.getValue(), ChargeTimeType.TRANCHE_DISBURSEMENT.getValue(), 
+                ChargeTimeType.LOAN_APPLICATION_FEE.getValue() };
     }
 
     public static Object[] validLoanChargeValues() {
@@ -97,6 +99,9 @@ public enum ChargeTimeType {
                 case 12:
                     chargeTimeType = TRANCHE_DISBURSEMENT;
                 break;
+                case 13:
+                	chargeTimeType =  LOAN_APPLICATION_FEE;
+                break;	
                 default:
                     chargeTimeType = INVALID;
                 break;
@@ -144,9 +149,13 @@ public enum ChargeTimeType {
     public boolean isOverdueInstallment() {
         return this.value.equals(ChargeTimeType.OVERDUE_INSTALLMENT.getValue());
     }
+    
+    public boolean isLoanApplicationFee(){
+    	return this.value.equals(ChargeTimeType.LOAN_APPLICATION_FEE.getValue());
+    }
 
     public boolean isAllowedLoanChargeTime() {
-        return isTimeOfDisbursement() || isOnSpecifiedDueDate() || isInstalmentFee() || isOverdueInstallment() || isTrancheDisbursement();
+        return isTimeOfDisbursement() || isOnSpecifiedDueDate() || isInstalmentFee() || isOverdueInstallment() || isTrancheDisbursement() || isLoanApplicationFee();
     }
 
     public boolean isAllowedClientChargeTime() {

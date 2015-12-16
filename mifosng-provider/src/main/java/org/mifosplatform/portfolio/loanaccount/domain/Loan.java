@@ -858,6 +858,10 @@ public class Loan extends AbstractPersistable<Long> {
                     amount = getPrincpal().getAmount();
                 }
             break;
+            case PERCENT_OF_LOAN_PROPOSED_AMOUNT:
+            	amount = getProposedPrincipal();
+            break;
+            
             default:
             break;
         }

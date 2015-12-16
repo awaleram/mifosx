@@ -57,7 +57,7 @@ public class LoanCharge extends AbstractPersistable<Long> {
     @JoinColumn(name = "charge_id", referencedColumnName = "id", nullable = false)
     private Charge charge;
 
-    @Column(name = "charge_time_enum", nullable = false)
+	@Column(name = "charge_time_enum", nullable = false)
     private Integer chargeTime;
 
     @Temporal(TemporalType.DATE)
@@ -158,6 +158,11 @@ public class LoanCharge extends AbstractPersistable<Long> {
                     amountPercentageAppliedTo = loan.getTotalInterest();
                 }
             break;
+            
+            case PERCENT_OF_LOAN_PROPOSED_AMOUNT:
+            	amountPercentageAppliedTo = loan.getProposedPrincipal();
+            break;
+            
             default:
             break;
         }
@@ -280,6 +285,20 @@ public class LoanCharge extends AbstractPersistable<Long> {
                 this.amountWaived = null;
                 this.amountWrittenOff = null;
             break;
+            
+            case PERCENT_OF_LOAN_PROPOSED_AMOUNT :
+            	this.percentage = chargeAmount;
+            	this.amountPercentageAppliedTo = amountPercentageAppliedTo;
+            	if(loanCharge.compareTo(BigDecimal.ZERO)== 0){
+            		loanCharge = percentageOf(this.amountPercentageAppliedTo);
+            		
+            	}
+            	this.amount = minimumAndMaximumCap(loanCharge);
+            	this.amountPaid = null;
+            	this.amountOutstanding = calculateOutstanding();
+                this.amountWaived = null;
+                this.amountWrittenOff = null;
+            	
         }
         this.amountOrPercentage = chargeAmount;
         if (this.loan != null && isInstalmentFee()) {
@@ -384,6 +403,17 @@ public class LoanCharge extends AbstractPersistable<Long> {
                     }
                     this.amount = minimumAndMaximumCap(loanCharge);
                 break;
+               
+                case PERCENT_OF_LOAN_PROPOSED_AMOUNT:
+                	this.percentage = amount;
+                	this.amountPercentageAppliedTo = loan.getProposedPrincipal();
+                	if(loanCharge.compareTo(BigDecimal.ZERO)==0){
+                		loanCharge = percentageOf(this.amountPercentageAppliedTo);
+                	}
+                	
+                	this.amount = minimumAndMaximumCap(loanCharge);
+                break;	
+                	
             }
             this.amountOrPercentage = amount;
             this.amountOutstanding = calculateOutstanding();
@@ -961,4 +991,13 @@ public class LoanCharge extends AbstractPersistable<Long> {
     public Loan getLoan() {
         return this.loan;
     }
+    
+
+    public Integer getChargeTime() {
+		return this.chargeTime;
+	}
+
+	public void setChargeTime(Integer chargeTime) {
+		this.chargeTime = chargeTime;
+	}
 }
