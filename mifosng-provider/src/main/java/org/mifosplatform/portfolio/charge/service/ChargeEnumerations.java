@@ -137,6 +137,12 @@ public class ChargeEnumerations {
             	optionData = new EnumOptionData(ChargeCalculationType.PERCENT_OF_PRINCIPALE_AMOUNT.getValue().longValue(),
             			ChargeCalculationType.PERCENT_OF_PRINCIPALE_AMOUNT.getCode(), "% Principal Proposed Amount");
              break;	
+             
+            case PERCENT_OF_LOAN_PROPOSED_AMOUNT :
+            	optionData = new EnumOptionData(ChargeCalculationType.PERCENT_OF_LOAN_PROPOSED_AMOUNT.getValue().longValue(),
+            			ChargeCalculationType.PERCENT_OF_LOAN_PROPOSED_AMOUNT.getCode(), "% Loan Proposed Amount");
+             break;
+             
             default:
                 optionData = new EnumOptionData(ChargeCalculationType.INVALID.getValue().longValue(),
                         ChargeCalculationType.INVALID.getCode(), "Invalid");

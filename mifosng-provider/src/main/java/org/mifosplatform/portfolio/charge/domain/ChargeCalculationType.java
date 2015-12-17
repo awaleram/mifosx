@@ -14,7 +14,7 @@ public enum ChargeCalculationType {
     PERCENT_OF_INTEREST(4, "chargeCalculationType.percent.of.interest"),
     PERCENT_OF_DISBURSEMENT_AMOUNT(5,"chargeCalculationType.percent.of.disbursement.amount"),
     PERCENT_OF_PRINCIPALE_AMOUNT(6, "chargeCalculationType.percent.of.principal.amount"),
-    PERCENT_OF_LOAN_PROPOSED_AMOUNT(7, "chargeCalculationType.percent.of.principal.amount");
+    PERCENT_OF_LOAN_PROPOSED_AMOUNT(7, "chargeCalculationType.percent.of.loan.proposed.amount");
 
     private final Integer value;
     private final String code;
