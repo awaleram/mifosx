@@ -284,4 +284,20 @@ public class SavingsAccountsApiResource {
 
         return this.toApiJsonSerializer.serialize(result);
     }
+    
+    
+    @POST
+    @Path("{accountId}/setLimits")
+    @Consumes({MediaType.APPLICATION_JSON})
+    @Produces({MediaType.APPLICATION_JSON})
+    public String setLimits(@PathParam("accountId") final Long accountId,@QueryParam("command") final String commandParam,
+            final String apiRequestBodyAsJson){
+    	
+    	  String jsonApiRequest = apiRequestBodyAsJson;
+    	  final CommandWrapperBuilder builder = new CommandWrapperBuilder().withJson(jsonApiRequest);
+    	  
+          return null;
+    }
+    
+    
 }
