@@ -33,6 +33,7 @@ public class ClientHelper {
     public static final String CREATED_DATE_MINUS_ONE = "27 November 2014";
     public static final String TRANSACTION_DATE = "01 March 2013";
     public static final String LAST_TRANSACTION_DATE = "01 March 2013";
+    public static final String DATE_FORMAT = "dd MMMM yyyy";
 
     public ClientHelper(final RequestSpecification requestSpec, final ResponseSpecification responseSpec) {
         this.requestSpec = requestSpec;
@@ -55,12 +56,12 @@ public class ClientHelper {
                 "clientId");
     }
 
-    public static Integer createClientForAccountPreference(final RequestSpecification requestSpec,
-            final ResponseSpecification responseSpec, final Integer clientType, String jsonAttributeToGetBack) {
+    public static Integer createClientForAccountPreference(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final Integer clientType, String jsonAttributeToGetBack) {
         final String activationDate = "04 March 2011";
         final String officeId = "1";
-        System.out
-                .println("---------------------------------CREATING A CLIENT BASED ON ACCOUNT PREFERENCE---------------------------------------------");
+        System.out.println(
+                "---------------------------------CREATING A CLIENT BASED ON ACCOUNT PREFERENCE---------------------------------------------");
         return Utils.performServerPost(requestSpec, responseSpec, CREATE_CLIENT_URL,
                 getTestClientWithClientTypeAsJSON(activationDate, officeId, clientType.toString()), jsonAttributeToGetBack);
     }
@@ -85,7 +86,7 @@ public class ClientHelper {
         map.put("firstname", Utils.randomNameGenerator("Client_FirstName_", 5));
         map.put("lastname", Utils.randomNameGenerator("Client_LastName_", 4));
         map.put("externalId", randomIDGenerator("ID_", 7));
-        map.put("dateFormat", "dd MMMM yyyy");
+        map.put("dateFormat", DATE_FORMAT);
         map.put("locale", "en");
         map.put("active", "true");
         map.put("activationDate", dateOfJoining);
@@ -99,7 +100,7 @@ public class ClientHelper {
         map.put("firstname", Utils.randomNameGenerator("Client_FirstName_", 5));
         map.put("lastname", Utils.randomNameGenerator("Client_LastName_", 4));
         map.put("externalId", randomIDGenerator("ID_", 7));
-        map.put("dateFormat", "dd MMMM yyyy");
+        map.put("dateFormat", DATE_FORMAT);
         map.put("locale", "en");
         map.put("active", "true");
         map.put("activationDate", dateOfJoining);
@@ -133,7 +134,7 @@ public class ClientHelper {
 
     /* Client status is a map.So adding SuppressWarnings */
     @SuppressWarnings("unchecked")
-	public static HashMap<String,Object> getClientStatus(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+    public static HashMap<String, Object> getClientStatus(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
             final String clientId) {
         return (HashMap<String, Object>) getClient(requestSpec, responseSpec, clientId, "status");
     }
@@ -151,9 +152,9 @@ public class ClientHelper {
         Integer clientClosureCodeId = (Integer) code.get("id");
 
         /* Retrieve/Create Code Values for the Code "ClientClosureReason" */
-        HashMap<String,Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientClosureCodeId,this.requestSpec,this.responseSpec);
-        Integer closureReasonId = (Integer)codeValue.get("id");
-        
+        HashMap<String, Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientClosureCodeId, this.requestSpec, this.responseSpec);
+        Integer closureReasonId = (Integer) codeValue.get("id");
+
         map.put("closureReasonId", closureReasonId.toString());
         map.put("locale", CommonConstants.locale);
         map.put("dateFormat", CommonConstants.dateFormat);
@@ -180,12 +181,13 @@ public class ClientHelper {
         final HashMap<String, String> map = new HashMap<>();
         /* Retrieve Code id for the Code "ClientRejectReason" */
         String codeName = "ClientRejectReason";
-        HashMap<String,Object> code = CodeHelper.getCodeByName(this.requestSpec, this.responseSpec, codeName);
-        Integer clientRejectionReasonCodeId = (Integer)code.get("id");
-        
+        HashMap<String, Object> code = CodeHelper.getCodeByName(this.requestSpec, this.responseSpec, codeName);
+        Integer clientRejectionReasonCodeId = (Integer) code.get("id");
+
         /* Retrieve/Create Code Values for the Code "ClientRejectReason" */
-        HashMap<String,Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientRejectionReasonCodeId,this.requestSpec,this.responseSpec);
-        Integer rejectionReasonId = (Integer)codeValue.get("id");
+        HashMap<String, Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientRejectionReasonCodeId, this.requestSpec,
+                this.responseSpec);
+        Integer rejectionReasonId = (Integer) codeValue.get("id");
 
         map.put("locale", CommonConstants.locale);
         map.put("dateFormat", CommonConstants.dateFormat);
@@ -212,13 +214,14 @@ public class ClientHelper {
         final HashMap<String, String> map = new HashMap<>();
         /* Retrieve Code id for the Code "ClientWithdrawReason" */
         String codeName = "ClientWithdrawReason";
-        HashMap<String,Object> code = CodeHelper.getCodeByName(this.requestSpec, this.responseSpec, codeName);
-        Integer clientWithdrawReasonCodeId = (Integer)code.get("id");
-        
+        HashMap<String, Object> code = CodeHelper.getCodeByName(this.requestSpec, this.responseSpec, codeName);
+        Integer clientWithdrawReasonCodeId = (Integer) code.get("id");
+
         /* Retrieve/Create Code Values for the Code "ClientWithdrawReason" */
-        HashMap<String,Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientWithdrawReasonCodeId,this.requestSpec,this.responseSpec);
-        Integer withdrawalReasonId = (Integer)codeValue.get("id");
-        
+        HashMap<String, Object> codeValue = CodeHelper.retrieveOrCreateCodeValue(clientWithdrawReasonCodeId, this.requestSpec,
+                this.responseSpec);
+        Integer withdrawalReasonId = (Integer) codeValue.get("id");
+
         map.put("locale", CommonConstants.locale);
         map.put("dateFormat", CommonConstants.dateFormat);
         map.put("withdrawalDate", CREATED_DATE_PLUS_ONE);
@@ -229,27 +232,59 @@ public class ClientHelper {
 
     }
 
-    public HashMap<String,Object> closeClient(final Integer clientId) {
+    public static String getSpecifiedDueDateChargesClientAsJSON(final String chargeId, final String dueDate) {
+        final HashMap<String, String> map = new HashMap<>();
+        map.put("locale", "en_GB");
+        map.put("dateFormat", DATE_FORMAT);
+        map.put("dueDate", dueDate);
+        map.put("chargeId", chargeId);
+        map.put("amount", "200");
+        String json = new Gson().toJson(map);
+        return json;
+    }
+
+    public static String getPayChargeJSON(final String date, String amount) {
+        final HashMap<String, String> map = new HashMap<>();
+        map.put("locale", "en_GB");
+        map.put("dateFormat", DATE_FORMAT);
+        map.put("transactionDate", date);
+        map.put("amount", amount);
+        String json = new Gson().toJson(map);
+        System.out.println(json);
+        return json;
+    }
+
+    public static String getWaiveChargeJSON(final String amount, String clientChargeId) {
+        final HashMap<String, String> map = new HashMap<>();
+        map.put("locale", "en_GB");
+        map.put("amount", amount);
+        map.put("clientChargeId", clientChargeId);
+        String json = new Gson().toJson(map);
+        System.out.println(json);
+        return json;
+    }
+
+    public HashMap<String, Object> closeClient(final Integer clientId) {
         System.out.println("--------------------------------- CLOSE CLIENT -------------------------------");
         return performClientActions(createClientOperationURL(CLOSE_CLIENT_COMMAND, clientId), getCloseClientAsJSON(), clientId);
     }
 
-    public HashMap<String,Object> reactivateClient(final Integer clientId) {
+    public HashMap<String, Object> reactivateClient(final Integer clientId) {
         System.out.println("--------------------------------- REACTIVATE CLIENT -------------------------------");
         return performClientActions(createClientOperationURL(REACTIVATE_CLIENT_COMMAND, clientId), getReactivateClientAsJSON(), clientId);
     }
 
-    public HashMap<String,Object> rejectClient(final Integer clientId) {
+    public HashMap<String, Object> rejectClient(final Integer clientId) {
         System.out.println("--------------------------------- REJECT CLIENT -------------------------------");
         return performClientActions(createClientOperationURL(REJECT_CLIENT_COMMAND, clientId), getRejectClientAsJSON(), clientId);
     }
 
-    public HashMap<String,Object> activateClient(final Integer clientId) {
+    public HashMap<String, Object> activateClient(final Integer clientId) {
         System.out.println("--------------------------------- ACTIVATE CLIENT -------------------------------");
         return performClientActions(createClientOperationURL(ACTIVATE_CLIENT_COMMAND, clientId), getActivateClientAsJSON(), clientId);
     }
 
-    public HashMap<String,Object> withdrawClient(final Integer clientId) {
+    public HashMap<String, Object> withdrawClient(final Integer clientId) {
         System.out.println("--------------------------------- WITHDRAWN CLIENT -------------------------------");
         return performClientActions(createClientOperationURL(WITHDRAW_CLIENT_COMMAND, clientId), getWithdrawClientAsJSON(), clientId);
     }
@@ -258,11 +293,65 @@ public class ClientHelper {
         return CLIENT_URL + "/" + clientId + "?command=" + command + "&" + Utils.TENANT_IDENTIFIER;
     }
 
-    private HashMap<String,Object> performClientActions(final String postURLForClient, final String jsonToBeSent, final Integer clientId) {
+    private HashMap<String, Object> performClientActions(final String postURLForClient, final String jsonToBeSent, final Integer clientId) {
         Utils.performServerPost(this.requestSpec, this.responseSpec, postURLForClient, jsonToBeSent, CommonConstants.RESPONSE_STATUS);
-        HashMap<String,Object> response = ClientHelper.getClientStatus(requestSpec, responseSpec, String.valueOf(clientId));
+        HashMap<String, Object> response = ClientHelper.getClientStatus(requestSpec, responseSpec, String.valueOf(clientId));
 
         return response;
+    }
+
+    public static Integer addChargesForClient(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final Integer clientId, final String request) {
+        System.out.println("--------------------------------- ADD CHARGES FOR Client --------------------------------");
+        final String ADD_CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/charges?" + Utils.TENANT_IDENTIFIER;
+        final HashMap<?, ?> response = Utils.performServerPost(requestSpec, responseSpec, ADD_CHARGES_URL, request, "");
+        return (Integer) response.get("resourceId");
+    }
+
+    public static String payChargesForClients(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final Integer clientId, final Integer clientChargeId, final String json) {
+        System.out.println("--------------------------------- PAY CHARGES FOR CLIENT --------------------------------");
+        final String CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/charges/" + clientChargeId + "?command=paycharge&"
+                + Utils.TENANT_IDENTIFIER;
+        final HashMap<?, ?> response = Utils.performServerPost(requestSpec, responseSpec, CHARGES_URL, json, "");
+        return response.get("transactionId") != null ? response.get("transactionId").toString() : null;
+    }
+
+    public static String waiveChargesForClients(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final Integer clientId, final Integer clientChargeId, final String json) {
+        System.out.println("--------------------------------- WAIVE CHARGES FOR CLIENT --------------------------------");
+        final String CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/charges/" + clientChargeId + "?command=waive&"
+                + Utils.TENANT_IDENTIFIER;
+
+        final HashMap<?, ?> response = Utils.performServerPost(requestSpec, responseSpec, CHARGES_URL, json, "");
+        return response.get("transactionId").toString();
+    }
+
+    public static Integer revertClientChargeTransaction(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final String clientId, String clientChargeId) {
+        System.out.println("---------------------------------UNDO TRANSACTION---------------------------------------------");
+        final String CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/transactions/" + clientChargeId + "?command=undo&"
+                + Utils.TENANT_IDENTIFIER;
+
+        final HashMap<?, ?> response = Utils.performServerPost(requestSpec, responseSpec, CHARGES_URL, "", "");
+        return (Integer) response.get("resourceId");
+
+    }
+
+    public static Object getClientCharge(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final String clientId, final String clientChargeId) {
+        System.out.println("---------------------------------GET CLIENT CHARGE---------------------------------------------");
+        final String CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/charges/" + clientChargeId + "?"
+                + Utils.TENANT_IDENTIFIER;
+        return Utils.performServerGet(requestSpec, responseSpec, CHARGES_URL, "amountOutstanding");
+    }
+
+    public static Boolean getClientTransactions(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
+            final String clientId, final String transactionId) {
+        System.out.println("---------------------------------GET CLIENT CHARGE TRANSACTIONS---------------------------------------------");
+        final String CHARGES_URL = "/mifosng-provider/api/v1/clients/" + clientId + "/transactions/" + transactionId + "?"
+                + Utils.TENANT_IDENTIFIER;
+        return Utils.performServerGet(requestSpec, responseSpec, CHARGES_URL, "reversed");
     }
 
 }

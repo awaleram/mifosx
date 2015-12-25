@@ -5,8 +5,10 @@
  */
 package org.mifosplatform.accounting.journalentry.service;
 
+import java.util.Date;
 import java.util.Map;
 
+import org.mifosplatform.accounting.provisioning.domain.ProvisioningEntry;
 import org.mifosplatform.infrastructure.core.api.JsonCommand;
 import org.mifosplatform.infrastructure.core.data.CommandProcessingResult;
 
@@ -19,4 +21,12 @@ public interface JournalEntryWritePlatformService {
     void createJournalEntriesForLoan(Map<String, Object> accountingBridgeData);
 
     void createJournalEntriesForSavings(Map<String, Object> accountingBridgeData);
+
+    void createJournalEntriesForClientTransactions(Map<String, Object> accountingBridgeData);
+
+    CommandProcessingResult defineOpeningBalance(JsonCommand command);
+    
+    public String revertProvisioningJournalEntries(final Date reversalTransactionDate, final Long entityId, final Integer entityType) ;
+
+    public String createProvisioningJournalEntries(ProvisioningEntry entry) ;
 }

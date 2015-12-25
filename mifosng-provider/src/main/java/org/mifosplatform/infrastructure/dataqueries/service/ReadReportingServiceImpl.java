@@ -30,6 +30,7 @@ import javax.ws.rs.core.StreamingOutput;
 import org.apache.commons.lang.StringUtils;
 import org.mifosplatform.infrastructure.core.domain.JdbcSupport;
 import org.mifosplatform.infrastructure.core.domain.MifosPlatformTenant;
+import org.mifosplatform.infrastructure.core.domain.MifosPlatformTenantConnection;
 import org.mifosplatform.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.mifosplatform.infrastructure.core.service.RoutingDataSource;
 import org.mifosplatform.infrastructure.core.service.ThreadLocalContextUtil;
@@ -248,9 +249,9 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             outputType = outputTypeParam;
         }
 
-        if (!(outputType.equalsIgnoreCase("HTML") || outputType.equalsIgnoreCase("PDF") || outputType.equalsIgnoreCase("XLS") || outputType
-                .equalsIgnoreCase("CSV"))) { throw new PlatformDataIntegrityException("error.msg.invalid.outputType",
-                "No matching Output Type: " + outputType); }
+        if (!(outputType.equalsIgnoreCase("HTML") || outputType.equalsIgnoreCase("PDF") || outputType.equalsIgnoreCase("XLS")
+                || outputType.equalsIgnoreCase("XLSX") || outputType.equalsIgnoreCase("CSV"))) { throw new PlatformDataIntegrityException(
+                "error.msg.invalid.outputType", "No matching Output Type: " + outputType); }
 
         if (this.noPentaho) { throw new PlatformDataIntegrityException("error.msg.no.pentaho", "Pentaho is not enabled",
                 "Pentaho is not enabled"); }
@@ -286,9 +287,15 @@ public class ReadReportingServiceImpl implements ReadReportingService {
                         .header("Content-Disposition", "attachment;filename=" + reportName.replaceAll(" ", "") + ".xls").build();
             }
 
+            if ("XLSX".equalsIgnoreCase(outputType)) {
+                ExcelReportUtil.createXLSX(masterReport, baos);
+                return Response.ok().entity(baos.toByteArray()).type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        .header("Content-Disposition", "attachment;filename=" + reportName.replaceAll(" ", "") + ".xlsx").build();
+            }
+
             if ("CSV".equalsIgnoreCase(outputType)) {
                 CSVReportUtil.createCSV(masterReport, baos, "UTF-8");
-                return Response.ok().entity(baos.toByteArray()).type("application/x-msdownload")
+                return Response.ok().entity(baos.toByteArray()).type("text/csv")
                         .header("Content-Disposition", "attachment;filename=" + reportName.replaceAll(" ", "") + ".csv").build();
             }
 
@@ -326,7 +333,7 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             for (final ParameterDefinitionEntry paramDefEntry : paramsDefinition.getParameterDefinitions()) {
                 final String paramName = paramDefEntry.getName();
                 if (!((paramName.equals("tenantUrl")) || (paramName.equals("userhierarchy") || (paramName.equals("username")) || (paramName
-                        .equals("password"))))) {
+                        .equals("password") || (paramName.equals("userid")))))) {
                     logger.info("paramName:" + paramName);
                     final String pValue = queryParams.get(paramName);
                     if (StringUtils.isBlank(pValue)) { throw new PlatformDataIntegrityException("error.msg.reporting.error",
@@ -362,11 +369,16 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             logger.info("db URL:" + tenantUrl + "      userhierarchy:" + userhierarchy);
             rptParamValues.put("userhierarchy", userhierarchy);
 
+            final Long userid = currentUser.getId();
+            logger.info("db URL:" + tenantUrl + "      userid:" + userid);
+            rptParamValues.put("userid", userid);
+
             final MifosPlatformTenant tenant = ThreadLocalContextUtil.getTenant();
+            final MifosPlatformTenantConnection tenantConnection = tenant.getConnection();
 
             rptParamValues.put("tenantUrl", tenantUrl);
-            rptParamValues.put("username", tenant.getSchemaUsername());
-            rptParamValues.put("password", tenant.getSchemaPassword());
+            rptParamValues.put("username", tenantConnection.getSchemaUsername());
+            rptParamValues.put("password", tenantConnection.getSchemaPassword());
         } catch (final Exception e) {
             logger.error("error.msg.reporting.error:" + e.getMessage());
             throw new PlatformDataIntegrityException("error.msg.reporting.error", e.getMessage());

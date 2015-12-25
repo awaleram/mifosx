@@ -309,6 +309,12 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                 }
                 CalendarInstance parentCalendarInstance = this.calendarInstanceRepository.findByEntityIdAndEntityTypeIdAndCalendarTypeId(
                         groupId, entityType, CalendarType.COLLECTION.getValue());
+                if(parentCalendarInstance == null){
+                	final String defaultUserMessage = "Meeting frequency is not attached to the Group/Center to which the client belongs to.";
+                    throw new GeneralPlatformDomainRuleException(
+                            "error.msg.meeting.frequency.not.attached.to.group.to.which.client.belongs.to",
+                            defaultUserMessage, account.clientId());
+                }
                 calendarInstance = CalendarInstance.from(parentCalendarInstance.getCalendar(), account.getId(),
                         CalendarEntityType.SAVINGS.getValue());
             }
@@ -364,7 +370,8 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
             // Save linked account information
             final Long savingsAccountId = command.longValueOfParameterNamed(DepositsApiConstants.linkedAccountParamName);
-            AccountAssociations accountAssociations = this.accountAssociationsRepository.findBySavingsId(accountId);
+            AccountAssociations accountAssociations = this.accountAssociationsRepository.findBySavingsIdAndType(accountId,
+                    AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue());
             if (savingsAccountId == null) {
                 if (accountAssociations != null) {
                     if (this.fromJsonHelper.parameterExists(DepositsApiConstants.linkedAccountParamName, command.parsedJson())) {

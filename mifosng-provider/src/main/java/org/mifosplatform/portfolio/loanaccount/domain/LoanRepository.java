@@ -52,7 +52,9 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
     public static final String FIND_ACTIVE_LOANS_PRODUCT_IDS_BY_GROUP = "Select loan.loanProduct.id from Loan loan where "
             + "loan.group.id = :groupId and loan.loanStatus = :loanStatus and loan.client.id is NULL group by loan.loanProduct.id";
 
-    public static final String DOES_CLIENT_HAVE_NON_CLOSED_LOANS = "select case when (count (loan) > 0) then true else false end from Loan loan where loan.client.id = :clientId and loan.loanStatus in (100,200,300,303,304)";
+    public static final String DOES_CLIENT_HAVE_NON_CLOSED_LOANS = "select case when (count (loan) > 0) then true else false end from Loan loan where loan.client.id = :clientId and loan.loanStatus in (100,200,300,303,304,700)";
+
+    public static final String DOES_PRODUCT_HAVE_NON_CLOSED_LOANS = "select case when (count (loan) > 0) then true else false end from Loan loan where loan.loanProduct.id = :productId and loan.loanStatus in (100,200,300,303,304,700)";
 
     @Query(FIND_GROUP_LOANS_DISBURSED_AFTER)
     List<Loan> getGroupLoansDisbursedAfter(@Param("disbursementDate") Date disbursementDate, @Param("groupId") Long groupId,
@@ -92,6 +94,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
     @Query("from Loan loan where loan.client.id = :clientId and loan.group.id = :groupId")
     List<Loan> findByClientIdAndGroupId(@Param("clientId") Long clientId, @Param("groupId") Long groupId);
 
+    @Query("from Loan loan where loan.client.id = :clientId and loan.group.id = :groupId and loan.loanStatus IN :loanStatuses")
+    List<Loan> findByClientIdAndGroupIdAndLoanStatus(@Param("clientId") Long clientId, @Param("groupId") Long groupId,
+            @Param("loanStatuses") Collection<Integer> loanStatuses);
+
     @Query("from Loan loan where loan.client.id = :clientId")
     List<Loan> findLoanByClientId(@Param("clientId") Long clientId);
 
@@ -122,5 +128,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
 
     @Query(DOES_CLIENT_HAVE_NON_CLOSED_LOANS)
     boolean doNonClosedLoanAccountsExistForClient(@Param("clientId") Long clientId);
+    
+    @Query(DOES_PRODUCT_HAVE_NON_CLOSED_LOANS)
+    boolean doNonClosedLoanAccountsExistForProduct(@Param("productId") Long productId);
 
 }

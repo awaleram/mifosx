@@ -25,7 +25,7 @@ public final class AllGroupTypesDataMapper implements RowMapper<GroupGeneralData
 
     public AllGroupTypesDataMapper() {
         final StringBuilder sqlBuilder = new StringBuilder(400);
-        sqlBuilder.append("g.id as id, g.external_id as externalId, g.display_name as name, ");
+        sqlBuilder.append("g.id as id, g.account_no as accountNumber, g.external_id as externalId, g.display_name as name, ");
         sqlBuilder.append("g.office_id as officeId, o.name as officeName, ");
         sqlBuilder.append("g.parent_id as centerId, pg.display_name as centerName, ");
         sqlBuilder.append("g.staff_id as staffId, s.display_name as staffName, ");
@@ -45,7 +45,8 @@ public final class AllGroupTypesDataMapper implements RowMapper<GroupGeneralData
         sqlBuilder.append("acu.firstname as activatedByFirstname, ");
         sqlBuilder.append("acu.lastname as activatedByLastname, ");
 
-        sqlBuilder.append("g.hierarchy as hierarchy ");
+        sqlBuilder.append("g.hierarchy as hierarchy, ");
+        sqlBuilder.append("g.level_id as groupLevel ");
         sqlBuilder.append("from m_group g ");
         sqlBuilder.append("join m_office o on o.id = g.office_id ");
         sqlBuilder.append("left join m_staff s on s.id = g.staff_id ");
@@ -65,6 +66,7 @@ public final class AllGroupTypesDataMapper implements RowMapper<GroupGeneralData
     public GroupGeneralData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
         final Long id = rs.getLong("id");
+        final String accountNo = rs.getString("accountNumber");
         final String name = rs.getString("name");
         final String externalId = rs.getString("externalId");
 
@@ -79,6 +81,7 @@ public final class AllGroupTypesDataMapper implements RowMapper<GroupGeneralData
         final Long staffId = JdbcSupport.getLong(rs, "staffId");
         final String staffName = rs.getString("staffName");
         final String hierarchy = rs.getString("hierarchy");
+        final String groupLevel = rs.getString("groupLevel");
 
         final LocalDate closedOnDate = JdbcSupport.getLocalDate(rs, "closedOnDate");
         final String closedByUsername = rs.getString("closedByUsername");
@@ -98,7 +101,7 @@ public final class AllGroupTypesDataMapper implements RowMapper<GroupGeneralData
                 submittedByLastname, activationDate, activatedByUsername, activatedByFirstname, activatedByLastname, closedOnDate,
                 closedByUsername, closedByFirstname, closedByLastname);
 
-        return GroupGeneralData.instance(id, name, externalId, status, activationDate, officeId, officeName, centerId, centerName, staffId,
-                staffName, hierarchy, timeline);
+        return GroupGeneralData.instance(id, accountNo, name, externalId, status, activationDate, officeId, officeName, centerId, centerName, staffId,
+                staffName, hierarchy, groupLevel, timeline);
     }
 }

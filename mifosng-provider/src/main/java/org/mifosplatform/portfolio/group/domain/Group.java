@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -25,6 +26,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
@@ -35,6 +37,7 @@ import org.mifosplatform.infrastructure.core.data.ApiParameterError;
 import org.mifosplatform.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.mifosplatform.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.mifosplatform.infrastructure.core.service.DateUtils;
+import org.mifosplatform.infrastructure.security.service.RandomPasswordGenerator;
 import org.mifosplatform.organisation.office.domain.Office;
 import org.mifosplatform.organisation.staff.domain.Staff;
 import org.mifosplatform.portfolio.client.domain.Client;
@@ -118,6 +121,15 @@ public final class Group extends AbstractPersistable<Long> {
     @JoinColumn(name = "submittedon_userid", nullable = true)
     private AppUser submittedBy;
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "center", orphanRemoval = true)
+    private Set<StaffAssignmentHistory> staffHistory;
+    
+    @Column(name = "account_no", length = 20, unique = true, nullable = false)
+    private String accountNumber;
+    
+    @Transient
+    private boolean accountNumberRequiresAutoGeneration = false;
+
     // JPA default constructor for entity
     protected Group() {
         this.name = null;
@@ -127,7 +139,8 @@ public final class Group extends AbstractPersistable<Long> {
 
     public static Group newGroup(final Office office, final Staff staff, final Group parent, final GroupLevel groupLevel,
             final String name, final String externalId, final boolean active, final LocalDate activationDate,
-            final Set<Client> clientMembers, final Set<Group> groupMembers, final LocalDate submittedOnDate, final AppUser currentUser) {
+            final Set<Client> clientMembers, final Set<Group> groupMembers, final LocalDate submittedOnDate, final AppUser currentUser,
+            final String accountNo) {
 
         // By default new group is created in PENDING status, unless explicitly
         // status is set to active
@@ -137,14 +150,14 @@ public final class Group extends AbstractPersistable<Long> {
             status = GroupingTypeStatus.ACTIVE;
             groupActivationDate = activationDate;
         }
-
+        
         return new Group(office, staff, parent, groupLevel, name, externalId, status, groupActivationDate, clientMembers, groupMembers,
-                submittedOnDate, currentUser);
+                submittedOnDate, currentUser, accountNo);
     }
 
     private Group(final Office office, final Staff staff, final Group parent, final GroupLevel groupLevel, final String name,
             final String externalId, final GroupingTypeStatus status, final LocalDate activationDate, final Set<Client> clientMembers,
-            final Set<Group> groupMembers, final LocalDate submittedOnDate, final AppUser currentUser) {
+            final Set<Group> groupMembers, final LocalDate submittedOnDate, final AppUser currentUser, final String accountNo) {
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
 
@@ -155,6 +168,13 @@ public final class Group extends AbstractPersistable<Long> {
 
         if (parent != null) {
             this.parent.addChild(this);
+        }
+        
+        if (StringUtils.isBlank(accountNo)) {
+            this.accountNumber = new RandomPasswordGenerator(19).generate();
+            this.accountNumberRequiresAutoGeneration = true;
+        } else {
+            this.accountNumber = accountNo;
         }
 
         if (StringUtils.isNotBlank(name)) {
@@ -174,6 +194,7 @@ public final class Group extends AbstractPersistable<Long> {
 
         this.submittedOnDate = submittedOnDate.toDate();
         this.submittedBy = currentUser;
+        this.staffHistory = null;
 
         associateClients(clientMembers);
 
@@ -212,6 +233,10 @@ public final class Group extends AbstractPersistable<Long> {
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         activate(currentUser, activationLocalDate, dataValidationErrors);
+        if (this.isCenter() && this.hasStaff()) {
+            Staff staff = this.getStaff();
+            this.reassignStaff(staff, activationLocalDate);
+        }
         throwExceptionIfErrors(dataValidationErrors);
 
     }
@@ -294,6 +319,12 @@ public final class Group extends AbstractPersistable<Long> {
             final LocalDate newValue = command.localDateValueOfParameterNamed(GroupingTypesApiConstants.activationDateParamName);
             this.activationDate = newValue.toDate();
         }
+        
+        if (command.isChangeInStringParameterNamed(GroupingTypesApiConstants.accountNoParamName, this.accountNumber)) {
+            final String newValue = command.stringValueOfParameterNamed(GroupingTypesApiConstants.accountNoParamName);
+            actualChanges.put(GroupingTypesApiConstants.accountNoParamName, newValue);
+            this.accountNumber = StringUtils.defaultIfEmpty(newValue, null);
+        }
 
         return actualChanges;
     }
@@ -339,16 +370,24 @@ public final class Group extends AbstractPersistable<Long> {
         return this.clientMembers.contains(client);
     }
 
-    public void generateHierarchy() {
-        if (this.parent != null) {
-            this.hierarchy = this.parent.hierarchyOf(getId());
-        } else {
-            this.hierarchy = "." + getId() + ".";
-        }
-    }
-
+	public void generateHierarchy() {
+		if (this.parent != null) {
+			this.hierarchy = this.parent.hierarchyOf(getId());
+		} else {
+			this.hierarchy = "." + getId() + ".";
+			for (Group group : this.groupMembers) {
+				group.setParent(this);
+				group.generateHierarchy();
+			}
+		}
+	}
+    
+	public void resetHierarchy() {
+			this.hierarchy = "." + this.getId();
+	}
+    
     private String hierarchyOf(final Long id) {
-        return this.hierarchy + id.toString() + ".";
+    	return this.hierarchy + id.toString() + ".";
     }
 
     public boolean isOfficeIdentifiedBy(final Long officeId) {
@@ -366,16 +405,24 @@ public final class Group extends AbstractPersistable<Long> {
         }
         return staffId;
     }
-
+   
     private void addChild(final Group group) {
         this.groupMembers.add(group);
     }
 
     public void updateStaff(final Staff staff) {
+        if (this.isCenter() && this.isActive()) {
+            LocalDate updatedDate = DateUtils.getLocalDateOfTenant();
+            reassignStaff(staff, updatedDate);
+        }
         this.staff = staff;
     }
 
     public void unassignStaff() {
+        if (this.isCenter() && this.isActive()) {
+            LocalDate dateOfStaffUnassigned = DateUtils.getLocalDateOfTenant();
+            removeStaff(dateOfStaffUnassigned);
+        }
         this.staff = null;
     }
 
@@ -479,6 +526,11 @@ public final class Group extends AbstractPersistable<Long> {
         return this.groupMembers.contains(group);
     }
 
+    public boolean hasStaff() {
+        if (this.staff != null) { return true; }
+        return false;
+    }
+
     public List<String> associateGroups(final Set<Group> groupMembersSet) {
 
         final List<String> differences = new ArrayList<>();
@@ -500,6 +552,8 @@ public final class Group extends AbstractPersistable<Long> {
 
             this.groupMembers.add(group);
             differences.add(group.getId().toString());
+            group.setParent(this);
+    		group.generateHierarchy();
         }
 
         return differences;
@@ -512,6 +566,7 @@ public final class Group extends AbstractPersistable<Long> {
             if (hasGroupAsMember(group)) {
                 this.groupMembers.remove(group);
                 differences.add(group.getId().toString());
+    			group.resetHierarchy();
             } else {
                 throw new GroupNotExistsInCenterException(group.getId(), getId());
             }
@@ -619,5 +674,57 @@ public final class Group extends AbstractPersistable<Long> {
 
     public Set<Client> getClientMembers() {
         return this.clientMembers;
+    }
+
+    // StaffAssignmentHistory[during center creation]
+    public void captureStaffHistoryDuringCenterCreation(final Staff newStaff, final LocalDate assignmentDate) {
+        if (this.isCenter() && this.isActive() && staff != null) {
+            this.staff = newStaff;
+            final StaffAssignmentHistory staffAssignmentHistory = StaffAssignmentHistory.createNew(this, this.staff, assignmentDate);
+            if (staffAssignmentHistory != null) {
+                staffHistory = new HashSet<>();
+                this.staffHistory.add(staffAssignmentHistory);
+            }
+        }
+    }
+
+    // StaffAssignmentHistory[assign staff]
+    public void reassignStaff(final Staff newStaff, final LocalDate assignmentDate) {
+        this.staff = newStaff;
+        final StaffAssignmentHistory staffAssignmentHistory = StaffAssignmentHistory.createNew(this, this.staff, assignmentDate);
+        this.staffHistory.add(staffAssignmentHistory);
+    }
+
+    // StaffAssignmentHistory[unassign staff]
+    public void removeStaff(final LocalDate unassignDate) {
+        final StaffAssignmentHistory latestHistoryRecord = findLatestIncompleteHistoryRecord();
+        if (latestHistoryRecord != null) {
+            latestHistoryRecord.updateEndDate(unassignDate);
+        }
+    }
+
+    private StaffAssignmentHistory findLatestIncompleteHistoryRecord() {
+
+        StaffAssignmentHistory latestRecordWithNoEndDate = null;
+        for (final StaffAssignmentHistory historyRecord : this.staffHistory) {
+            if (historyRecord.isCurrentRecord()) {
+                latestRecordWithNoEndDate = historyRecord;
+                break;
+            }
+        }
+        return latestRecordWithNoEndDate;
+    }
+    
+    public boolean isAccountNumberRequiresAutoGeneration() {
+        return this.accountNumberRequiresAutoGeneration;
+    }
+
+    public void setAccountNumberRequiresAutoGeneration(final boolean accountNumberRequiresAutoGeneration) {
+        this.accountNumberRequiresAutoGeneration = accountNumberRequiresAutoGeneration;
+    }
+    
+    public void updateAccountNo(final String accountIdentifier) {
+        this.accountNumber = accountIdentifier;
+        this.accountNumberRequiresAutoGeneration = false;
     }
 }

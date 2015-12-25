@@ -34,12 +34,12 @@ import org.mifosplatform.infrastructure.core.exception.UnrecognizedQueryParamExc
 import org.mifosplatform.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
 import org.mifosplatform.infrastructure.core.serialization.ToApiJsonSerializer;
 import org.mifosplatform.infrastructure.core.service.Page;
+import org.mifosplatform.infrastructure.core.service.SearchParameters;
 import org.mifosplatform.infrastructure.security.service.PlatformSecurityContext;
 import org.mifosplatform.portfolio.accountdetails.data.AccountSummaryCollectionData;
 import org.mifosplatform.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
 import org.mifosplatform.portfolio.client.data.ClientData;
 import org.mifosplatform.portfolio.client.service.ClientReadPlatformService;
-import org.mifosplatform.infrastructure.core.service.SearchParameters;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountData;
 import org.mifosplatform.portfolio.savings.service.SavingsAccountReadPlatformService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,12 +94,11 @@ public class ClientsApiResource {
             clientData = this.clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_CLOSURE_REASON);
         } else if (is(commandParam, "acceptTransfer")) {
             clientData = this.clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_CLOSURE_REASON);
-        }else if (is(commandParam, "reject")) {
+        } else if (is(commandParam, "reject")) {
             clientData = this.clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_REJECT_REASON);
-        }else if (is(commandParam, "withdraw")) {
+        } else if (is(commandParam, "withdraw")) {
             clientData = this.clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_WITHDRAW_REASON);
-        }
-        else {
+        } else {
             clientData = this.clientReadPlatformService.retrieveTemplate(officeId, staffInSelectedOfficeOnly);
         }
 
@@ -115,12 +114,25 @@ public class ClientsApiResource {
             @QueryParam("displayName") final String displayName, @QueryParam("firstName") final String firstname,
             @QueryParam("lastName") final String lastname, @QueryParam("underHierarchy") final String hierarchy,
             @QueryParam("offset") final Integer offset, @QueryParam("limit") final Integer limit,
-            @QueryParam("orderBy") final String orderBy, @QueryParam("sortOrder") final String sortOrder) {
+            @QueryParam("orderBy") final String orderBy, @QueryParam("sortOrder") final String sortOrder,
+            @QueryParam("orphansOnly") final Boolean orphansOnly) {
+
+        return this.retrieveAll(uriInfo, sqlSearch, officeId, externalId, displayName, firstname, 
+        		lastname, hierarchy, offset, limit, orderBy, sortOrder, orphansOnly, false);
+    }
+    
+    public String retrieveAll(final UriInfo uriInfo, final String sqlSearch,
+            final Long officeId, final String externalId,
+            final String displayName, final String firstname,
+            final String lastname, final String hierarchy,
+            final Integer offset, final Integer limit,
+            final String orderBy, final String sortOrder,
+            final Boolean orphansOnly, final boolean isSelfUser) {
 
         this.context.authenticatedUser().validateHasReadPermission(ClientApiConstants.CLIENT_RESOURCE_NAME);
 
         final SearchParameters searchParameters = SearchParameters.forClients(sqlSearch, officeId, externalId, displayName, firstname,
-                lastname, hierarchy, offset, limit, orderBy, sortOrder);
+                lastname, hierarchy, offset, limit, orderBy, sortOrder, orphansOnly, isSelfUser);
 
         final Page<ClientData> clientData = this.clientReadPlatformService.retrieveAll(searchParameters);
 
@@ -144,8 +156,7 @@ public class ClientsApiResource {
             final ClientData templateData = this.clientReadPlatformService.retrieveTemplate(clientData.officeId(),
                     staffInSelectedOfficeOnly);
             clientData = ClientData.templateOnTop(clientData, templateData);
-            Collection<SavingsAccountData> savingAccountOptions = this.savingsAccountReadPlatformService.retrieveForLookup(
-                    clientId, null);
+            Collection<SavingsAccountData> savingAccountOptions = this.savingsAccountReadPlatformService.retrieveForLookup(clientId, null);
             if (savingAccountOptions != null && savingAccountOptions.size() > 0) {
                 clientData = ClientData.templateWithSavingAccountOptions(clientData, savingAccountOptions);
             }
@@ -243,21 +254,20 @@ public class ClientsApiResource {
         } else if (is(commandParam, "updateSavingsAccount")) {
             commandRequest = builder.updateClientSavingsAccount(clientId).build();
             result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
-        }else if (is(commandParam,"reject")){
-        	commandRequest = builder.rejectClient(clientId).build();
+        } else if (is(commandParam, "reject")) {
+            commandRequest = builder.rejectClient(clientId).build();
             result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
-       }else if (is(commandParam,"withdraw")){
-       	commandRequest = builder.withdrawClient(clientId).build();
-        result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
-       }else if (is(commandParam,"reactivate")){
-           commandRequest = builder.reActivateClient(clientId).build();
-           result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
-          }
-        
+        } else if (is(commandParam, "withdraw")) {
+            commandRequest = builder.withdrawClient(clientId).build();
+            result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+        } else if (is(commandParam, "reactivate")) {
+            commandRequest = builder.reActivateClient(clientId).build();
+            result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+        }
 
         if (result == null) { throw new UnrecognizedQueryParamException("command", commandParam, new Object[] { "activate",
                 "unassignStaff", "assignStaff", "close", "proposeTransfer", "withdrawTransfer", "acceptTransfer", "rejectTransfer",
-                "updateSavingsAccount","reject" ,"withdraw","reactivate"}); }
+                "updateSavingsAccount", "reject", "withdraw", "reactivate" }); }
 
         return this.toApiJsonSerializer.serialize(result);
     }

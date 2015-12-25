@@ -159,8 +159,9 @@ public class LoanAssembler {
         final Long transactionProcessingStrategyId = this.fromApiJsonHelper.extractLongNamed("transactionProcessingStrategyId", element);
         final Long loanPurposeId = this.fromApiJsonHelper.extractLongNamed("loanPurposeId", element);
         final Boolean syncDisbursementWithMeeting = this.fromApiJsonHelper.extractBooleanNamed("syncDisbursementWithMeeting", element);
-        final Boolean createStandingInstructionAtDisbursement = this.fromApiJsonHelper.extractBooleanNamed("createStandingInstructionAtDisbursement", element);
-        
+        final Boolean createStandingInstructionAtDisbursement = this.fromApiJsonHelper.extractBooleanNamed(
+                "createStandingInstructionAtDisbursement", element);
+
         final LoanProduct loanProduct = this.loanProductRepository.findOne(productId);
         if (loanProduct == null) { throw new LoanProductNotFoundException(productId); }
 
@@ -171,8 +172,30 @@ public class LoanAssembler {
         if (loanPurposeId != null) {
             loanPurpose = this.codeValueRepository.findOneWithNotFoundDetection(loanPurposeId);
         }
+        Set<LoanDisbursementDetails> disbursementDetails = null;
+        BigDecimal fixedEmiAmount = null;
+        if (loanProduct.isMultiDisburseLoan() || loanProduct.canDefineInstallmentAmount()) {
+            fixedEmiAmount = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(LoanApiConstants.emiAmountParameterName, element);
+        }
+        BigDecimal maxOutstandingLoanBalance = null;
+        if (loanProduct.isMultiDisburseLoan()) {
+            disbursementDetails = fetchDisbursementData(element.getAsJsonObject());
+            final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
+            maxOutstandingLoanBalance = this.fromApiJsonHelper.extractBigDecimalNamed(LoanApiConstants.maxOutstandingBalanceParameterName,
+                    element, locale);
+            if (disbursementDetails.isEmpty()) {
+                final String errorMessage = "For this loan product, disbursement details must be provided";
+                throw new MultiDisbursementDataRequiredException(LoanApiConstants.disbursementDataParameterName, errorMessage);
+            }
+
+            if (disbursementDetails.size() > loanProduct.maxTrancheCount()) {
+                final String errorMessage = "Number of tranche shouldn't be greter than " + loanProduct.maxTrancheCount();
+                throw new ExceedingTrancheCountException(LoanApiConstants.disbursementDataParameterName, errorMessage,
+                        loanProduct.maxTrancheCount(), disbursementDetails.size());
+            }
+        }
         final Set<LoanCollateral> collateral = this.loanCollateralAssembler.fromParsedJson(element);
-        final Set<LoanCharge> loanCharges = this.loanChargeAssembler.fromParsedJson(element);
+        final Set<LoanCharge> loanCharges = this.loanChargeAssembler.fromParsedJson(element,disbursementDetails);
         for (final LoanCharge loanCharge : loanCharges) {
             if (!loanProduct.hasCurrencyCodeOf(loanCharge.currencyCode())) {
                 final String errorMessage = "Charge and Loan must have the same currency.";
@@ -192,30 +215,14 @@ public class LoanAssembler {
         Group group = null;
 
         final LoanProductRelatedDetail loanProductRelatedDetail = this.loanScheduleAssembler.assembleLoanProductRelatedDetail(element);
+        
+        final BigDecimal interestRateDifferential = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(LoanApiConstants.interestRateDifferentialParameterName, element);
+        final Boolean isFloatingInterestRate = this.fromApiJsonHelper.extractBooleanNamed(LoanApiConstants.isFloatingInterestRateParameterName, element);
 
         final String loanTypeParameterName = "loanType";
         final String loanTypeStr = this.fromApiJsonHelper.extractStringNamed(loanTypeParameterName, element);
         final EnumOptionData loanType = AccountEnumerations.loanType(loanTypeStr);
-        Set<LoanDisbursementDetails> disbursementDetails = null;
-        BigDecimal fixedEmiAmount = null;
-        BigDecimal maxOutstandingLoanBalance = null;
-        if (loanProduct.isMultiDisburseLoan()) {
-            disbursementDetails = fetchDisbursementData(element.getAsJsonObject());
-            final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
-            fixedEmiAmount = this.fromApiJsonHelper.extractBigDecimalNamed(LoanApiConstants.emiAmountParameterName, element, locale);
-            maxOutstandingLoanBalance = this.fromApiJsonHelper.extractBigDecimalNamed(LoanApiConstants.maxOutstandingBalanceParameterName,
-                    element, locale);
-            if (disbursementDetails.isEmpty()) {
-                final String errorMessage = "For this loan product, disbursement details must be provided";
-                throw new MultiDisbursementDataRequiredException(LoanApiConstants.disbursementDataParameterName, errorMessage);
-            }
-
-            if (disbursementDetails.size() > loanProduct.maxTrancheCount()) {
-                final String errorMessage = "Number of tranche shouldn't be greter than " + loanProduct.maxTrancheCount();
-                throw new ExceedingTrancheCountException(LoanApiConstants.disbursementDataParameterName, errorMessage,
-                        loanProduct.maxTrancheCount(), disbursementDetails.size());
-            }
-        }
+       
 
         if (clientId != null) {
             client = this.clientRepository.findOneWithNotFoundDetection(clientId);
@@ -234,21 +241,22 @@ public class LoanAssembler {
 
             loanApplication = Loan.newIndividualLoanApplicationFromGroup(accountNo, client, group, loanType.getId().intValue(),
                     loanProduct, fund, loanOfficer, loanPurpose, loanTransactionProcessingStrategy, loanProductRelatedDetail, loanCharges,
-                    collateral, syncDisbursementWithMeeting, fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance, 
-                    createStandingInstructionAtDisbursement);
+                    collateral, syncDisbursementWithMeeting, fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance,
+                    createStandingInstructionAtDisbursement, isFloatingInterestRate, interestRateDifferential);
 
         } else if (group != null) {
 
             loanApplication = Loan.newGroupLoanApplication(accountNo, group, loanType.getId().intValue(), loanProduct, fund, loanOfficer,
                     loanPurpose, loanTransactionProcessingStrategy, loanProductRelatedDetail, loanCharges, collateral,
-                    syncDisbursementWithMeeting, fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance, 
-                    createStandingInstructionAtDisbursement);
+                    syncDisbursementWithMeeting, fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance,
+                    createStandingInstructionAtDisbursement,isFloatingInterestRate, interestRateDifferential);
 
         } else if (client != null) {
 
             loanApplication = Loan.newIndividualLoanApplication(accountNo, client, loanType.getId().intValue(), loanProduct, fund,
                     loanOfficer, loanPurpose, loanTransactionProcessingStrategy, loanProductRelatedDetail, loanCharges, collateral,
-                    fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance, createStandingInstructionAtDisbursement);
+                    fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance, createStandingInstructionAtDisbursement,
+                    isFloatingInterestRate, interestRateDifferential);
 
         }
 
@@ -264,8 +272,11 @@ public class LoanAssembler {
                 loanDisbursementDetails.updateLoan(loanApplication);
             }
         }
-        
-        final LocalDate recalculationRestFrequencyDate = this.fromApiJsonHelper.extractLocalDateNamed(LoanProductConstants.recalculationRestFrequencyDateParamName, element);
+
+        final LocalDate recalculationRestFrequencyDate = this.fromApiJsonHelper.extractLocalDateNamed(
+                LoanProductConstants.recalculationRestFrequencyDateParamName, element);
+        final LocalDate recalculationCompoundingFrequencyDate = this.fromApiJsonHelper.extractLocalDateNamed(
+                LoanProductConstants.recalculationCompoundingFrequencyDateParamName, element);
 
         final LoanApplicationTerms loanApplicationTerms = this.loanScheduleAssembler.assembleLoanTerms(element);
         final boolean isHolidayEnabled = this.configurationDomainService.isRescheduleRepaymentsOnHolidaysEnabled();
@@ -275,15 +286,15 @@ public class LoanAssembler {
         final boolean allowTransactionsOnNonWorkingDay = this.configurationDomainService.allowTransactionsOnNonWorkingDayEnabled();
         final boolean allowTransactionsOnHoliday = this.configurationDomainService.allowTransactionsOnHolidayEnabled();
         final LoanScheduleModel loanScheduleModel = this.loanScheduleAssembler.assembleLoanScheduleFrom(loanApplicationTerms,
-                isHolidayEnabled, holidays, workingDays, element);
+                isHolidayEnabled, holidays, workingDays, element,disbursementDetails);
         loanApplication.loanApplicationSubmittal(currentUser, loanScheduleModel, loanApplicationTerms, defaultLoanLifecycleStateMachine(),
                 submittedOnDate, externalId, allowTransactionsOnHoliday, holidays, workingDays, allowTransactionsOnNonWorkingDay,
-                recalculationRestFrequencyDate);
+                recalculationRestFrequencyDate, recalculationCompoundingFrequencyDate);
 
         return loanApplication;
     }
 
-    private Set<LoanDisbursementDetails> fetchDisbursementData(final JsonObject command) {
+    public Set<LoanDisbursementDetails> fetchDisbursementData(final JsonObject command) {
         final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(command);
         final String dateFormat = this.fromApiJsonHelper.extractDateFormatParameter(command);
         Set<LoanDisbursementDetails> disbursementDatas = new HashSet<>();
@@ -294,6 +305,7 @@ public class LoanAssembler {
                 do {
                     final JsonObject jsonObject = disbursementDataArray.get(i).getAsJsonObject();
                     Date expectedDisbursementDate = null;
+                    Date actualDisbursementDate = null;
                     BigDecimal principal = null;
 
                     if (jsonObject.has(LoanApiConstants.disbursementDateParameterName)) {
@@ -308,7 +320,8 @@ public class LoanAssembler {
                             && StringUtils.isNotBlank((jsonObject.get(LoanApiConstants.disbursementPrincipalParameterName).getAsString()))) {
                         principal = jsonObject.getAsJsonPrimitive(LoanApiConstants.disbursementPrincipalParameterName).getAsBigDecimal();
                     }
-                    disbursementDatas.add(new LoanDisbursementDetails(expectedDisbursementDate, null, principal));
+
+                    disbursementDatas.add(new LoanDisbursementDetails(expectedDisbursementDate, actualDisbursementDate, principal));
                     i++;
                 } while (i < disbursementDataArray.size());
             }

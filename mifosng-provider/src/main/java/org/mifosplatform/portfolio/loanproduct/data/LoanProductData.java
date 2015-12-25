@@ -17,7 +17,6 @@ import org.mifosplatform.accounting.common.AccountingRuleType;
 import org.mifosplatform.accounting.glaccount.data.GLAccountData;
 import org.mifosplatform.accounting.producttoaccountmapping.data.ChargeToGLAccountMapper;
 import org.mifosplatform.accounting.producttoaccountmapping.data.PaymentTypeToGLAccountMapper;
-import org.mifosplatform.infrastructure.codes.data.CodeValueData;
 import org.mifosplatform.infrastructure.core.data.EnumOptionData;
 import org.mifosplatform.organisation.monetary.data.CurrencyData;
 import org.mifosplatform.portfolio.calendar.data.CalendarData;
@@ -26,12 +25,15 @@ import org.mifosplatform.portfolio.common.domain.DaysInMonthType;
 import org.mifosplatform.portfolio.common.domain.DaysInYearType;
 import org.mifosplatform.portfolio.common.domain.PeriodFrequencyType;
 import org.mifosplatform.portfolio.common.service.CommonEnumerations;
+import org.mifosplatform.portfolio.floatingrates.data.FloatingRateData;
 import org.mifosplatform.portfolio.fund.data.FundData;
 import org.mifosplatform.portfolio.loanaccount.data.LoanInterestRecalculationData;
 import org.mifosplatform.portfolio.loanproduct.domain.AmortizationMethod;
 import org.mifosplatform.portfolio.loanproduct.domain.InterestCalculationPeriodMethod;
 import org.mifosplatform.portfolio.loanproduct.domain.InterestMethod;
+import org.mifosplatform.portfolio.loanproduct.domain.LoanProductConfigurableAttributes;
 import org.mifosplatform.portfolio.loanproduct.service.LoanEnumerations;
+import org.mifosplatform.portfolio.paymenttype.data.PaymentTypeData;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -67,6 +69,20 @@ public class LoanProductData {
     private final EnumOptionData interestRateFrequencyType;
     private final BigDecimal annualInterestRate;
 
+    private final boolean isLinkedToFloatingInterestRates;
+    private final Integer floatingRateId;
+    private final String floatingRateName;
+    private final BigDecimal interestRateDifferential;
+    private final BigDecimal minDifferentialLendingRate;
+    private final BigDecimal defaultDifferentialLendingRate;
+    private final BigDecimal maxDifferentialLendingRate;
+    private final boolean isFloatingInterestRateCalculationAllowed;
+
+    // Variable Installments Settings
+    private final boolean allowVariableInstallments;
+    private final Integer minimumGap;
+    private final Integer maximumGap;
+
     // settings
     private final EnumOptionData amortizationType;
     private final EnumOptionData interestType;
@@ -84,6 +100,8 @@ public class LoanProductData {
     private final boolean isInterestRecalculationEnabled;
     private final LoanProductInterestRecalculationData interestRecalculationData;
     private final Integer minimumDaysBetweenDisbursalAndFirstRepayment;
+    private final boolean canDefineInstallmentAmount;
+    private final Integer installmentAmountInMultiplesOf;
 
     // charges
     private final Collection<ChargeData> charges;
@@ -101,7 +119,7 @@ public class LoanProductData {
     // template related
     private final Collection<FundData> fundOptions;
     @SuppressWarnings("unused")
-    private final Collection<CodeValueData> paymentTypeOptions;
+    private final Collection<PaymentTypeData> paymentTypeOptions;
     @SuppressWarnings("unused")
     private final Collection<CurrencyData> currencyOptions;
     private final List<EnumOptionData> repaymentFrequencyTypeOptions;
@@ -127,16 +145,23 @@ public class LoanProductData {
     private final List<EnumOptionData> interestRecalculationCompoundingTypeOptions;
     @SuppressWarnings("unused")
     private final List<EnumOptionData> rescheduleStrategyTypeOptions;
+    @SuppressWarnings("unused")
+    private final List<EnumOptionData> preClosureInterestCalculationStrategyOptions;
 
     @SuppressWarnings("unused")
     private final List<EnumOptionData> interestRecalculationFrequencyTypeOptions;
+    @SuppressWarnings("unused")
+    private final List<FloatingRateData> floatingRateOptions;
 
     private final Boolean multiDisburseLoan;
     private final Integer maxTrancheCount;
     private final BigDecimal outstandingLoanBalance;
+    private final BigDecimal principalThresholdForLastInstallment;
 
     private final Boolean holdGuaranteeFunds;
     private final LoanProductGuaranteeData productGuaranteeData;
+    private final Boolean accountMovesOutOfNPAOnlyOnArrearsCompletion;
+    private LoanProductConfigurableAttributes allowAttributeOverrides;
 
     /**
      * Used when returning lookup information about loan product for dropdowns.
@@ -157,6 +182,17 @@ public class LoanProductData {
         final BigDecimal minInterestRatePerPeriod = null;
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
+        final boolean isLinkedToFloatingInterestRates = false;
+        final Integer floatingRateId = null;
+        final String floatingRateName = null;
+        final BigDecimal interestRateDifferential = null;
+        final BigDecimal minDifferentialLendingRate = null;
+        final BigDecimal defaultDifferentialLendingRate = null;
+        final BigDecimal maxDifferentialLendingRate = null;
+        final boolean isFloatingInterestRateCalculationAllowed = false;
+        final boolean isVariableInstallmentsAllowed = false;
+        final Integer minimumGap = null;
+        final Integer maximumGap = null;
         final EnumOptionData repaymentFrequencyType = null;
         final EnumOptionData interestRateFrequencyType = null;
         final EnumOptionData amortizationType = null;
@@ -187,12 +223,17 @@ public class LoanProductData {
         final BigDecimal outstandingLoanBalance = null;
         final LoanProductGuaranteeData productGuaranteeData = null;
         final Boolean holdGuaranteeFunds = false;
+        final BigDecimal principalThresholdForLastInstallment = null;
+        final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion = false;
 
         final EnumOptionData daysInMonthType = null;
         final EnumOptionData daysInYearType = null;
         final boolean isInterestRecalculationEnabled = false;
         final LoanProductInterestRecalculationData interestRecalculationData = null;
         final Integer minimumDaysBetweenDisbursalAndFirstRepayment = null;
+        final boolean canDefineInstallmentAmount = false;
+        final Integer installmentAmountInMultiplesOf = null;
+        final LoanProductConfigurableAttributes loanProductConfigurableAttributes = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
@@ -202,7 +243,12 @@ public class LoanProductData {
                 accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariations,
                 interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
                 graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData);
+                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
+                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
+                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
+                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
+                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap);
+
     }
 
     public static LoanProductData lookupWithCurrency(final Long id, final String name, final CurrencyData currency) {
@@ -220,6 +266,17 @@ public class LoanProductData {
         final BigDecimal minInterestRatePerPeriod = null;
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
+        final boolean isLinkedToFloatingInterestRates = false;
+        final Integer floatingRateId = null;
+        final String floatingRateName = null;
+        final BigDecimal interestRateDifferential = null;
+        final BigDecimal minDifferentialLendingRate = null;
+        final BigDecimal defaultDifferentialLendingRate = null;
+        final BigDecimal maxDifferentialLendingRate = null;
+        final boolean isFloatingInterestRateCalculationAllowed = false;
+        final boolean isVariableInstallmentsAllowed = false;
+        final Integer minimumGap = null;
+        final Integer maximumGap = null;
         final EnumOptionData repaymentFrequencyType = null;
         final EnumOptionData interestRateFrequencyType = null;
         final EnumOptionData amortizationType = null;
@@ -258,6 +315,11 @@ public class LoanProductData {
         final Integer minimumDaysBetweenDisbursalAndFirstRepayment = null;
         final Boolean holdGuaranteeFunds = false;
         final LoanProductGuaranteeData productGuaranteeData = null;
+        final BigDecimal principalThresholdForLastInstallment = null;
+        final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion = false;
+        final boolean canDefineInstallmentAmount = false;
+        final Integer installmentAmountInMultiplesOf = null;
+        final LoanProductConfigurableAttributes loanProductConfigurableAttributes = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
@@ -267,7 +329,12 @@ public class LoanProductData {
                 accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariations,
                 interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
                 graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData);
+                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
+                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
+                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
+                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
+                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap);
+
     }
 
     public static LoanProductData sensibleDefaultsForNewLoanProductCreation() {
@@ -289,6 +356,17 @@ public class LoanProductData {
         final BigDecimal minInterestRatePerPeriod = null;
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
+        final boolean isLinkedToFloatingInterestRates = false;
+        final Integer floatingRateId = null;
+        final String floatingRateName = null;
+        final BigDecimal interestRateDifferential = null;
+        final BigDecimal minDifferentialLendingRate = null;
+        final BigDecimal defaultDifferentialLendingRate = null;
+        final BigDecimal maxDifferentialLendingRate = null;
+        final boolean isFloatingInterestRateCalculationAllowed = false;
+        final boolean isVariableInstallmentsAllowed = false;
+        final Integer minimumGap = null;
+        final Integer maximumGap = null;
         final EnumOptionData repaymentFrequencyType = LoanEnumerations.repaymentFrequencyType(PeriodFrequencyType.MONTHS);
         final EnumOptionData interestRateFrequencyType = LoanEnumerations.interestRateFrequencyType(PeriodFrequencyType.MONTHS);
         final EnumOptionData amortizationType = LoanEnumerations.amortizationType(AmortizationMethod.EQUAL_INSTALLMENTS);
@@ -330,6 +408,11 @@ public class LoanProductData {
         final Integer minimumDaysBetweenDisbursalAndFirstRepayment = null;
         final Boolean holdGuaranteeFunds = false;
         final LoanProductGuaranteeData productGuaranteeData = null;
+        final BigDecimal principalThresholdForLastInstallment = null;
+        final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion = false;
+        final boolean canDefineInstallmentAmount = false;
+        final Integer installmentAmountInMultiplesOf = null;
+        final LoanProductConfigurableAttributes loanProductConfigurableAttributes = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
@@ -340,7 +423,12 @@ public class LoanProductData {
                 principalVariationsForBorrowerCycle, interestRateVariationsForBorrowerCycle, numberOfRepaymentVariationsForBorrowerCycle,
                 multiDisburseLoan, maxTrancheCount, outstandingLoanBalance, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType,
                 daysInYearType, isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment,
-                holdGuaranteeFunds, productGuaranteeData);
+                holdGuaranteeFunds, productGuaranteeData, principalThresholdForLastInstallment,
+                accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount, installmentAmountInMultiplesOf,
+                loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId, floatingRateName,
+                interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate, maxDifferentialLendingRate,
+                isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap);
+
     }
 
     public static LoanProductData withAccountingDetails(final LoanProductData productData, final Map<String, Object> accountingMappings,
@@ -372,7 +460,13 @@ public class LoanProductData {
             final Integer overdueDaysForNPA, final EnumOptionData daysInMonthType, final EnumOptionData daysInYearType,
             final boolean isInterestRecalculationEnabled, final LoanProductInterestRecalculationData interestRecalculationData,
             final Integer minimumDaysBetweenDisbursalAndFirstRepayment, boolean holdGuaranteeFunds,
-            LoanProductGuaranteeData loanProductGuaranteeData) {
+            final LoanProductGuaranteeData loanProductGuaranteeData, final BigDecimal principalThresholdForLastInstallment,
+            final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion, boolean canDefineInstallmentAmount,
+            Integer installmentAmountInMultiplesOf, LoanProductConfigurableAttributes allowAttributeOverrides,
+            boolean isLinkedToFloatingInterestRates, Integer floatingRateId, String floatingRateName, BigDecimal interestRateDifferential,
+            BigDecimal minDifferentialLendingRate, BigDecimal defaultDifferentialLendingRate, BigDecimal maxDifferentialLendingRate,
+            boolean isFloatingInterestRateCalculationAllowed, final boolean isVariableInstallmentsAllowed,
+            final Integer minimumGapBetweenInstallments, final Integer maximumGapBetweenInstallments) {
         this.id = id;
         this.name = name;
         this.shortName = shortName;
@@ -393,6 +487,17 @@ public class LoanProductData {
         this.minInterestRatePerPeriod = minInterestRatePerPeriod;
         this.maxInterestRatePerPeriod = maxInterestRatePerPeriod;
         this.annualInterestRate = annualInterestRate;
+        this.isLinkedToFloatingInterestRates = isLinkedToFloatingInterestRates;
+        this.floatingRateId = floatingRateId;
+        this.floatingRateName = floatingRateName;
+        this.interestRateDifferential = interestRateDifferential;
+        this.minDifferentialLendingRate = minDifferentialLendingRate;
+        this.defaultDifferentialLendingRate = defaultDifferentialLendingRate;
+        this.maxDifferentialLendingRate = maxDifferentialLendingRate;
+        this.isFloatingInterestRateCalculationAllowed = isFloatingInterestRateCalculationAllowed;
+        this.allowVariableInstallments = isVariableInstallmentsAllowed;
+        this.minimumGap = minimumGapBetweenInstallments;
+        this.maximumGap = maximumGapBetweenInstallments;
         this.repaymentFrequencyType = repaymentFrequencyType;
         this.interestRateFrequencyType = interestRateFrequencyType;
         this.amortizationType = amortizationType;
@@ -423,6 +528,7 @@ public class LoanProductData {
         this.interestCalculationPeriodTypeOptions = null;
         this.repaymentFrequencyTypeOptions = null;
         this.interestRateFrequencyTypeOptions = null;
+        this.floatingRateOptions = null;
 
         this.accountingMappingOptions = null;
         this.accountingRuleOptions = null;
@@ -445,6 +551,9 @@ public class LoanProductData {
         this.interestRecalculationData = interestRecalculationData;
         this.holdGuaranteeFunds = holdGuaranteeFunds;
         this.productGuaranteeData = loanProductGuaranteeData;
+        this.principalThresholdForLastInstallment = principalThresholdForLastInstallment;
+        this.accountMovesOutOfNPAOnlyOnArrearsCompletion = accountMovesOutOfNPAOnlyOnArrearsCompletion;
+        this.allowAttributeOverrides = allowAttributeOverrides;
 
         this.daysInMonthTypeOptions = null;
         this.daysInYearTypeOptions = null;
@@ -452,10 +561,14 @@ public class LoanProductData {
         this.rescheduleStrategyTypeOptions = null;
         this.interestRecalculationFrequencyTypeOptions = null;
 
+        this.canDefineInstallmentAmount = canDefineInstallmentAmount;
+        this.installmentAmountInMultiplesOf = installmentAmountInMultiplesOf;
+        this.preClosureInterestCalculationStrategyOptions = null;
+
     }
 
     public LoanProductData(final LoanProductData productData, final Collection<ChargeData> chargeOptions,
-            final Collection<ChargeData> penaltyOptions, final Collection<CodeValueData> paymentTypeOptions,
+            final Collection<ChargeData> penaltyOptions, final Collection<PaymentTypeData> paymentTypeOptions,
             final Collection<CurrencyData> currencyOptions, final List<EnumOptionData> amortizationTypeOptions,
             final List<EnumOptionData> interestTypeOptions, final List<EnumOptionData> interestCalculationPeriodTypeOptions,
             final List<EnumOptionData> repaymentFrequencyTypeOptions, final List<EnumOptionData> interestRateFrequencyTypeOptions,
@@ -463,7 +576,8 @@ public class LoanProductData {
             final Map<String, List<GLAccountData>> accountingMappingOptions, final List<EnumOptionData> accountingRuleOptions,
             final List<EnumOptionData> valueConditionTypeOptions, final List<EnumOptionData> daysInMonthTypeOptions,
             final List<EnumOptionData> daysInYearTypeOptions, final List<EnumOptionData> interestRecalculationCompoundingTypeOptions,
-            final List<EnumOptionData> rescheduleStrategyTypeOptions, final List<EnumOptionData> interestRecalculationFrequencyTypeOptions) {
+            final List<EnumOptionData> rescheduleStrategyTypeOptions, final List<EnumOptionData> interestRecalculationFrequencyTypeOptions,
+            final List<EnumOptionData> preCloseInterestCalculationStrategyOptions, final List<FloatingRateData> floatingRateOptions) {
         this.id = productData.id;
         this.name = productData.name;
         this.shortName = productData.shortName;
@@ -483,6 +597,17 @@ public class LoanProductData {
         this.minInterestRatePerPeriod = productData.minInterestRatePerPeriod;
         this.maxInterestRatePerPeriod = productData.maxInterestRatePerPeriod;
         this.annualInterestRate = productData.annualInterestRate;
+        this.isLinkedToFloatingInterestRates = productData.isLinkedToFloatingInterestRates;
+        this.floatingRateId = productData.floatingRateId;
+        this.floatingRateName = productData.floatingRateName;
+        this.interestRateDifferential = productData.interestRateDifferential;
+        this.minDifferentialLendingRate = productData.minDifferentialLendingRate;
+        this.defaultDifferentialLendingRate = productData.defaultDifferentialLendingRate;
+        this.maxDifferentialLendingRate = productData.maxDifferentialLendingRate;
+        this.isFloatingInterestRateCalculationAllowed = productData.isFloatingInterestRateCalculationAllowed;
+        this.allowVariableInstallments = productData.allowVariableInstallments;
+        this.minimumGap = productData.minimumGap;
+        this.maximumGap = productData.maximumGap;
         this.repaymentFrequencyType = productData.repaymentFrequencyType;
         this.interestRateFrequencyType = productData.interestRateFrequencyType;
         this.amortizationType = productData.amortizationType;
@@ -510,6 +635,7 @@ public class LoanProductData {
         this.currency = productData.currency;
         this.fundOptions = fundOptions;
         this.transactionProcessingStrategyOptions = transactionStrategyOptions;
+        this.floatingRateOptions = floatingRateOptions;
         if (this.transactionProcessingStrategyOptions != null && this.transactionProcessingStrategyOptions.size() == 1) {
             final List<TransactionProcessingStrategyData> listOfOptions = new ArrayList<>(this.transactionProcessingStrategyOptions);
 
@@ -548,11 +674,14 @@ public class LoanProductData {
         this.interestRecalculationData = productData.interestRecalculationData;
         this.holdGuaranteeFunds = productData.holdGuaranteeFunds;
         this.productGuaranteeData = productData.productGuaranteeData;
+        this.principalThresholdForLastInstallment = productData.principalThresholdForLastInstallment;
+        this.accountMovesOutOfNPAOnlyOnArrearsCompletion = productData.accountMovesOutOfNPAOnlyOnArrearsCompletion;
 
         this.daysInMonthTypeOptions = daysInMonthTypeOptions;
         this.daysInYearTypeOptions = daysInYearTypeOptions;
         this.interestRecalculationCompoundingTypeOptions = interestRecalculationCompoundingTypeOptions;
         this.rescheduleStrategyTypeOptions = rescheduleStrategyTypeOptions;
+        this.allowAttributeOverrides = productData.allowAttributeOverrides;
 
         if (CollectionUtils.isEmpty(interestRecalculationFrequencyTypeOptions)) {
             this.interestRecalculationFrequencyTypeOptions = null;
@@ -560,6 +689,9 @@ public class LoanProductData {
             this.interestRecalculationFrequencyTypeOptions = interestRecalculationFrequencyTypeOptions;
         }
 
+        this.canDefineInstallmentAmount = productData.canDefineInstallmentAmount;
+        this.installmentAmountInMultiplesOf = productData.installmentAmountInMultiplesOf;
+        this.preClosureInterestCalculationStrategyOptions = preCloseInterestCalculationStrategyOptions;
     }
 
     private Collection<ChargeData> nullIfEmpty(final Collection<ChargeData> charges) {
@@ -780,9 +912,11 @@ public class LoanProductData {
         final Long id = null;
         final Long loanId = null;
         final CalendarData calendarData = null;
+        final CalendarData compoundingCalendarData = null;
         return new LoanInterestRecalculationData(id, loanId, getInterestRecalculationCompoundingType(), getRescheduleStrategyType(),
                 calendarData, getRecalculationRestFrequencyType(), getRecalculationRestFrequencyInterval(),
-                getRecalculationRestFrequencyDate());
+                getRecalculationRestFrequencyDate(), compoundingCalendarData, getRecalculationCompoundingFrequencyType(),
+                getRecalculationCompoundingFrequencyInterval(), getRecalculationCompoundingFrequencyDate());
     }
 
     private EnumOptionData getRescheduleStrategyType() {
@@ -800,13 +934,72 @@ public class LoanProductData {
         return null;
     }
 
-    public EnumOptionData getRecalculationRestFrequencyType() {
+    private EnumOptionData getRecalculationRestFrequencyType() {
         if (isInterestRecalculationEnabled()) { return this.interestRecalculationData.getRecalculationRestFrequencyType(); }
         return null;
     }
 
-    public Integer getRecalculationRestFrequencyInterval() {
+    private Integer getRecalculationRestFrequencyInterval() {
         if (isInterestRecalculationEnabled()) { return this.interestRecalculationData.getRecalculationRestFrequencyInterval(); }
         return null;
+    }
+
+    private LocalDate getRecalculationCompoundingFrequencyDate() {
+        if (isInterestRecalculationEnabled()) { return this.interestRecalculationData.getRecalculationCompoundingFrequencyDate(); }
+        return null;
+    }
+
+    private EnumOptionData getRecalculationCompoundingFrequencyType() {
+        if (isInterestRecalculationEnabled()) { return this.interestRecalculationData.getRecalculationCompoundingFrequencyType(); }
+        return null;
+    }
+
+    private Integer getRecalculationCompoundingFrequencyInterval() {
+        if (isInterestRecalculationEnabled()) { return this.interestRecalculationData.getRecalculationCompoundingFrequencyInterval(); }
+        return null;
+    }
+
+    public boolean canDefineInstallmentAmount() {
+        return this.canDefineInstallmentAmount;
+    }
+
+    public LoanProductConfigurableAttributes getloanProductConfigurableAttributes() {
+        return this.allowAttributeOverrides;
+    }
+
+    public void setloanProductConfigurableAttributes(LoanProductConfigurableAttributes loanProductConfigurableAttributes) {
+        this.allowAttributeOverrides = loanProductConfigurableAttributes;
+    }
+
+    public boolean isLinkedToFloatingInterestRates() {
+        return this.isLinkedToFloatingInterestRates;
+    }
+
+    public BigDecimal getMinDifferentialLendingRate() {
+        return this.minDifferentialLendingRate;
+    }
+
+    public BigDecimal getDefaultDifferentialLendingRate() {
+        return this.defaultDifferentialLendingRate;
+    }
+
+    public BigDecimal getMaxDifferentialLendingRate() {
+        return this.maxDifferentialLendingRate;
+    }
+
+    public boolean isFloatingInterestRateCalculationAllowed() {
+        return this.isFloatingInterestRateCalculationAllowed;
+    }
+
+    public boolean isVariableInstallmentsAllowed() {
+        return this.allowVariableInstallments;
+    }
+
+    public Integer getMinimumGapBetweenInstallments() {
+        return this.minimumGap;
+    }
+
+    public Integer getMaximumGapBetweenInstallments() {
+        return this.maximumGap;
     }
 }

@@ -11,8 +11,6 @@ public interface ScheduledJobRunnerService {
 
     void updateLoanSummaryDetails();
 
-    void updateLoanArrearsAgeingDetails();
-
     void updateLoanPaidInAdvance();
 
     void applyAnnualFeeForSavings();
@@ -22,4 +20,6 @@ public interface ScheduledJobRunnerService {
     void updateNPA();
 
     void updateMaturityDetailsOfDepositAccounts();
+
+    void generateRDSchedule();
 }

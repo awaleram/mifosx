@@ -11,7 +11,10 @@ import org.joda.time.Months;
 import org.joda.time.Weeks;
 import org.joda.time.Years;
 import org.mifosplatform.organisation.holiday.service.HolidayUtil;
+import org.mifosplatform.organisation.workingdays.domain.RepaymentRescheduleType;
 import org.mifosplatform.organisation.workingdays.service.WorkingDaysUtil;
+import org.mifosplatform.portfolio.calendar.domain.Calendar;
+import org.mifosplatform.portfolio.calendar.service.CalendarUtils;
 import org.mifosplatform.portfolio.common.domain.DayOfWeekType;
 import org.mifosplatform.portfolio.common.domain.PeriodFrequencyType;
 import org.mifosplatform.portfolio.loanaccount.data.HolidayDetailDTO;
@@ -26,7 +29,7 @@ public class DefaultScheduledDateGenerator implements ScheduledDateGenerator {
         LocalDate lastRepaymentDate = loanApplicationTerms.getExpectedDisbursementDate();
         boolean isFirstRepayment = true;
         for (int repaymentPeriod = 1; repaymentPeriod <= numberOfRepayments; repaymentPeriod++) {
-            lastRepaymentDate = generateNextRepaymentDate(lastRepaymentDate, loanApplicationTerms, isFirstRepayment);
+            lastRepaymentDate = generateNextRepaymentDate(lastRepaymentDate, loanApplicationTerms, isFirstRepayment, holidayDetailDTO);
             isFirstRepayment = false;
         }
         lastRepaymentDate = adjustRepaymentDate(lastRepaymentDate, loanApplicationTerms, holidayDetailDTO);
@@ -35,15 +38,30 @@ public class DefaultScheduledDateGenerator implements ScheduledDateGenerator {
 
     @Override
     public LocalDate generateNextRepaymentDate(final LocalDate lastRepaymentDate, final LoanApplicationTerms loanApplicationTerms,
-            boolean isFirstRepayment) {
+            boolean isFirstRepayment, final HolidayDetailDTO holidayDetailDTO) {
         final LocalDate firstRepaymentPeriodDate = loanApplicationTerms.getCalculatedRepaymentsStartingFromLocalDate();
         LocalDate dueRepaymentPeriodDate = null;
         if (isFirstRepayment && firstRepaymentPeriodDate != null) {
             dueRepaymentPeriodDate = firstRepaymentPeriodDate;
         } else {
+            Calendar currentCalendar = loanApplicationTerms.getLoanCalendar();
             dueRepaymentPeriodDate = getRepaymentPeriodDate(loanApplicationTerms.getRepaymentPeriodFrequencyType(),
                     loanApplicationTerms.getRepaymentEvery(), lastRepaymentDate, loanApplicationTerms.getNthDay(),
                     loanApplicationTerms.getWeekDayType());
+            dueRepaymentPeriodDate = CalendarUtils.adjustDate(dueRepaymentPeriodDate, loanApplicationTerms.getSeedDate(),
+                    loanApplicationTerms.getRepaymentPeriodFrequencyType());
+            if (currentCalendar != null) {
+                // If we have currentCalendar object, this means there is a
+                // calendar associated with
+                // the loan, and we should use it in order to calculate next
+                // repayment
+                LocalDate seedDate = currentCalendar.getStartDateLocalDate();
+                String reccuringString = currentCalendar.getRecurrence();
+                dueRepaymentPeriodDate = CalendarUtils.getNewRepaymentMeetingDate(reccuringString, seedDate, dueRepaymentPeriodDate,
+                        loanApplicationTerms.getRepaymentEvery(),
+                        CalendarUtils.getMeetingFrequencyFromPeriodFrequencyType(loanApplicationTerms.getLoanTermPeriodFrequencyType()),
+                        holidayDetailDTO.getWorkingDays());
+            }
         }
         return dueRepaymentPeriodDate;
     }
@@ -53,22 +71,35 @@ public class DefaultScheduledDateGenerator implements ScheduledDateGenerator {
             final HolidayDetailDTO holidayDetailDTO) {
 
         LocalDate adjustedDate = dueRepaymentPeriodDate;
+
+        LocalDate nextDueRepaymentPeriodDate = getRepaymentPeriodDate(loanApplicationTerms.getRepaymentPeriodFrequencyType(),
+                loanApplicationTerms.getRepaymentEvery(), adjustedDate, loanApplicationTerms.getNthDay(),
+                loanApplicationTerms.getWeekDayType());
+
+        final RepaymentRescheduleType rescheduleType = RepaymentRescheduleType.fromInt(holidayDetailDTO.getWorkingDays()
+                .getRepaymentReschedulingType());
+
         /**
          * Fix for https://mifosforge.jira.com/browse/MIFOSX-1357
          */
-        // recursively check for the next working day.
-        while (WorkingDaysUtil.isNonWorkingDay(holidayDetailDTO.getWorkingDays(), adjustedDate)) {
+        // recursively check for the next working meeting day.
+        while (WorkingDaysUtil.isNonWorkingDay(holidayDetailDTO.getWorkingDays(), nextDueRepaymentPeriodDate)
+                && rescheduleType == RepaymentRescheduleType.MOVE_TO_NEXT_REPAYMENT_MEETING_DAY) {
 
-            final LocalDate nextDueRepaymentPeriodDate = getRepaymentPeriodDate(loanApplicationTerms.getRepaymentPeriodFrequencyType(),
-                    loanApplicationTerms.getRepaymentEvery(), adjustedDate, loanApplicationTerms.getNthDay(),
+            nextDueRepaymentPeriodDate = getRepaymentPeriodDate(loanApplicationTerms.getRepaymentPeriodFrequencyType(),
+                    loanApplicationTerms.getRepaymentEvery(), nextDueRepaymentPeriodDate, loanApplicationTerms.getNthDay(),
                     loanApplicationTerms.getWeekDayType());
-            adjustedDate = WorkingDaysUtil.getOffSetDateIfNonWorkingDay(adjustedDate, nextDueRepaymentPeriodDate,
-                    holidayDetailDTO.getWorkingDays());
+            nextDueRepaymentPeriodDate = CalendarUtils.adjustDate(nextDueRepaymentPeriodDate, loanApplicationTerms.getSeedDate(),
+                    loanApplicationTerms.getRepaymentPeriodFrequencyType());
+
         }
+        adjustedDate = WorkingDaysUtil.getOffSetDateIfNonWorkingDay(adjustedDate, nextDueRepaymentPeriodDate,
+                holidayDetailDTO.getWorkingDays());
 
         if (holidayDetailDTO.isHolidayEnabled()) {
             adjustedDate = HolidayUtil.getRepaymentRescheduleDateToIfHoliday(adjustedDate, holidayDetailDTO.getHolidays());
         }
+
         return adjustedDate;
     }
 
@@ -185,7 +216,7 @@ public class DefaultScheduledDateGenerator implements ScheduledDateGenerator {
         LocalDate generatedDate = loanApplicationTerms.getExpectedDisbursementDate();
         boolean isFirstRepayment = true;
         while (!generatedDate.isAfter(lastRepaymentDate)) {
-            generatedDate = generateNextRepaymentDate(generatedDate, loanApplicationTerms, isFirstRepayment);
+            generatedDate = generateNextRepaymentDate(generatedDate, loanApplicationTerms, isFirstRepayment, holidayDetailDTO);
             isFirstRepayment = false;
         }
         generatedDate = adjustRepaymentDate(generatedDate, loanApplicationTerms, holidayDetailDTO);

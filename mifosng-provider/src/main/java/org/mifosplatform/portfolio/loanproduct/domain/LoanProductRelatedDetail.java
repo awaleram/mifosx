@@ -43,16 +43,16 @@ public class LoanProductRelatedDetail implements LoanProductMinimumRepaymentSche
     @Column(name = "principal_amount", scale = 6, precision = 19, nullable = true)
     private BigDecimal principal;
 
-    @Column(name = "nominal_interest_rate_per_period", scale = 6, precision = 19, nullable = false)
+    @Column(name = "nominal_interest_rate_per_period", scale = 6, precision = 19, nullable = true)
     private BigDecimal nominalInterestRatePerPeriod;
 
     // FIXME - move away form JPA ordinal use for enums using just integer -
     // requires sql patch for existing users of software.
     @Enumerated(EnumType.ORDINAL)
-    @Column(name = "interest_period_frequency_enum", nullable = false)
+    @Column(name = "interest_period_frequency_enum", nullable = true)
     private PeriodFrequencyType interestPeriodFrequencyType;
 
-    @Column(name = "annual_nominal_interest_rate", scale = 6, precision = 19, nullable = false)
+    @Column(name = "annual_nominal_interest_rate", scale = 6, precision = 19, nullable = true)
     private BigDecimal annualNominalInterestRate;
 
     // FIXME - move away form JPA ordinal use for enums using just integer -
@@ -205,17 +205,20 @@ public class LoanProductRelatedDetail implements LoanProductMinimumRepaymentSche
 
     @Override
     public BigDecimal getNominalInterestRatePerPeriod() {
-        return BigDecimal.valueOf(Double.valueOf(this.nominalInterestRatePerPeriod.stripTrailingZeros().toString()));
+        return this.nominalInterestRatePerPeriod == null? null
+        		: BigDecimal.valueOf(Double.valueOf(this.nominalInterestRatePerPeriod.stripTrailingZeros().toString()));
     }
 
     @Override
     public PeriodFrequencyType getInterestPeriodFrequencyType() {
-        return this.interestPeriodFrequencyType;
+        return this.interestPeriodFrequencyType == null? PeriodFrequencyType.INVALID
+        		: this.interestPeriodFrequencyType;
     }
 
     @Override
     public BigDecimal getAnnualNominalInterestRate() {
-        return BigDecimal.valueOf(Double.valueOf(this.annualNominalInterestRate.stripTrailingZeros().toString()));
+        return this.annualNominalInterestRate == null? null
+        		:BigDecimal.valueOf(Double.valueOf(this.annualNominalInterestRate.stripTrailingZeros().toString()));
     }
 
     @Override
@@ -365,7 +368,9 @@ public class LoanProductRelatedDetail implements LoanProductMinimumRepaymentSche
         }
 
         final String interestRateFrequencyTypeParamName = "interestRateFrequencyType";
-        if (command.isChangeInIntegerParameterNamed(interestRateFrequencyTypeParamName, this.interestPeriodFrequencyType.getValue())) {
+        final int interestPeriodFrequencyType = this.interestPeriodFrequencyType == null? 
+        		PeriodFrequencyType.INVALID.getValue() : this.interestPeriodFrequencyType.getValue();
+        if (command.isChangeInIntegerParameterNamed(interestRateFrequencyTypeParamName, interestPeriodFrequencyType)) {
             final Integer newValue = command.integerValueOfParameterNamed(interestRateFrequencyTypeParamName);
             actualChanges.put(interestRateFrequencyTypeParamName, newValue);
             actualChanges.put("locale", localeAsInput);
@@ -514,4 +519,63 @@ public class LoanProductRelatedDetail implements LoanProductMinimumRepaymentSche
     public void updateNumberOfRepayments(Integer numberOfRepayments) {
         this.numberOfRepayments = numberOfRepayments;
     }
+
+    public Integer getGraceOnPrincipalPayment() {
+        return graceOnPrincipalPayment;
+    }
+
+    public void setGraceOnPrincipalPayment(Integer graceOnPrincipalPayment) {
+        this.graceOnPrincipalPayment = graceOnPrincipalPayment;
+    }
+
+    public Integer getGraceOnInterestPayment() {
+        return graceOnInterestPayment;
+    }
+
+    public void setGraceOnInterestPayment(Integer graceOnInterestPayment) {
+        this.graceOnInterestPayment = graceOnInterestPayment;
+    }
+
+    public Integer getGraceOnArrearsAgeing() {
+        return graceOnArrearsAgeing;
+    }
+
+    public void setGraceOnArrearsAgeing(Integer graceOnArrearsAgeing) {
+        this.graceOnArrearsAgeing = graceOnArrearsAgeing;
+    }
+
+    public void setInterestMethod(InterestMethod interestMethod) {
+        this.interestMethod = interestMethod;
+    }
+
+    public void setInterestCalculationPeriodMethod(InterestCalculationPeriodMethod interestCalculationPeriodMethod) {
+        this.interestCalculationPeriodMethod = interestCalculationPeriodMethod;
+    }
+
+    public void setRepayEvery(Integer repayEvery) {
+        this.repayEvery = repayEvery;
+    }
+
+    public void setRepaymentPeriodFrequencyType(PeriodFrequencyType repaymentPeriodFrequencyType) {
+        this.repaymentPeriodFrequencyType = repaymentPeriodFrequencyType;
+    }
+
+    public void setAmortizationMethod(AmortizationMethod amortizationMethod) {
+        this.amortizationMethod = amortizationMethod;
+    }
+
+    public void setInArrearsTolerance(BigDecimal inArrearsTolerance) {
+        this.inArrearsTolerance = inArrearsTolerance;
+    }
+
+    public BigDecimal getArrearsTolerance() {
+        return this.inArrearsTolerance;
+    }
+
+	public void updateForFloatingInterestRates() {
+		this.nominalInterestRatePerPeriod = null;
+		this.interestPeriodFrequencyType = PeriodFrequencyType.INVALID;
+		this.annualNominalInterestRate = null;		
+	}
+
 }

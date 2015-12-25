@@ -136,6 +136,13 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     }
 
     @Override
+    public Long retrieveOpeningBalancesContraAccount() {
+        final String propertyName = "office-opening-balances-contra-account";
+        final GlobalConfigurationProperty property = this.globalConfigurationRepository.findOneByNameWithNotFoundDetection(propertyName);
+        return property.getValue();
+    }
+
+    @Override
     public boolean isSavingsInterestPostingAtCurrentPeriodEnd() {
         final String propertyName = "savings-interest-posting-current-period-end";
         final GlobalConfigurationProperty property = this.globalConfigurationRepository.findOneByNameWithNotFoundDetection(propertyName);
@@ -169,6 +176,27 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     @Override
     public boolean isMeetingMandatoryForJLGLoans() {
         final String propertyName = "meetings-mandatory-for-jlg-loans";
+        final GlobalConfigurationProperty property = this.globalConfigurationRepository.findOneByNameWithNotFoundDetection(propertyName);
+        return property.isEnabled();
+    }
+
+    @Override
+    public int getRoundingMode() {
+        final String propertyName = "rounding-mode";
+        int defaultValue = 6; // 6 Stands for HALF-EVEN
+        final GlobalConfigurationProperty property = this.globalConfigurationRepository.findOneByNameWithNotFoundDetection(propertyName);
+        if (property.isEnabled()) {
+            int value = property.getValue().intValue();
+            if (value < 0 || value > 6) {
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
+
+    public boolean isBackdatePenaltiesEnabled() {
+        final String propertyName = "backdate-penalties-enabled";
         final GlobalConfigurationProperty property = this.globalConfigurationRepository.findOneByNameWithNotFoundDetection(propertyName);
         return property.isEnabled();
     }

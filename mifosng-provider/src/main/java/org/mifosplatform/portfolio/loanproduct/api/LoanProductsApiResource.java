@@ -32,8 +32,6 @@ import org.mifosplatform.accounting.producttoaccountmapping.service.ProductToGLA
 import org.mifosplatform.commands.domain.CommandWrapper;
 import org.mifosplatform.commands.service.CommandWrapperBuilder;
 import org.mifosplatform.commands.service.PortfolioCommandSourceWritePlatformService;
-import org.mifosplatform.infrastructure.codes.data.CodeValueData;
-import org.mifosplatform.infrastructure.codes.service.CodeValueReadPlatformService;
 import org.mifosplatform.infrastructure.core.api.ApiParameterHelper;
 import org.mifosplatform.infrastructure.core.api.ApiRequestParameterHelper;
 import org.mifosplatform.infrastructure.core.data.CommandProcessingResult;
@@ -46,6 +44,8 @@ import org.mifosplatform.organisation.monetary.service.CurrencyReadPlatformServi
 import org.mifosplatform.portfolio.charge.data.ChargeData;
 import org.mifosplatform.portfolio.charge.service.ChargeReadPlatformService;
 import org.mifosplatform.portfolio.common.service.DropdownReadPlatformService;
+import org.mifosplatform.portfolio.floatingrates.data.FloatingRateData;
+import org.mifosplatform.portfolio.floatingrates.service.FloatingRatesReadPlatformService;
 import org.mifosplatform.portfolio.fund.data.FundData;
 import org.mifosplatform.portfolio.fund.service.FundReadPlatformService;
 import org.mifosplatform.portfolio.loanproduct.data.LoanProductData;
@@ -54,7 +54,8 @@ import org.mifosplatform.portfolio.loanproduct.productmix.data.ProductMixData;
 import org.mifosplatform.portfolio.loanproduct.productmix.service.ProductMixReadPlatformService;
 import org.mifosplatform.portfolio.loanproduct.service.LoanDropdownReadPlatformService;
 import org.mifosplatform.portfolio.loanproduct.service.LoanProductReadPlatformService;
-import org.mifosplatform.portfolio.paymentdetail.PaymentDetailConstants;
+import org.mifosplatform.portfolio.paymenttype.data.PaymentTypeData;
+import org.mifosplatform.portfolio.paymenttype.service.PaymentTypeReadPlatformService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -74,7 +75,9 @@ public class LoanProductsApiResource {
             "paymentTypeOptions", "currencyOptions", "repaymentFrequencyTypeOptions", "interestRateFrequencyTypeOptions",
             "amortizationTypeOptions", "interestTypeOptions", "interestCalculationPeriodTypeOptions",
             "transactionProcessingStrategyOptions", "chargeOptions", "accountingOptions", "accountingRuleOptions",
-            "accountingMappingOptions"));
+            "accountingMappingOptions", "floatingRateOptions", "isLinkedToFloatingInterestRates", "floatingRatesId", "interestRateDifferential",
+            "minDifferentialLendingRate", "defaultDifferentialLendingRate", "maxDifferentialLendingRate",
+            "isFloatingInterestRateCalculationAllowed"));
 
     private final Set<String> PRODUCT_MIX_DATA_PARAMETERS = new HashSet<>(Arrays.asList("productId", "productName", "restrictedProducts",
             "allowedProducts", "productOptions"));
@@ -91,11 +94,12 @@ public class LoanProductsApiResource {
     private final LoanDropdownReadPlatformService dropdownReadPlatformService;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
     private final ProductToGLAccountMappingReadPlatformService accountMappingReadPlatformService;
-    private final CodeValueReadPlatformService codeValueReadPlatformService;
     private final AccountingDropdownReadPlatformService accountingDropdownReadPlatformService;
     private final DefaultToApiJsonSerializer<ProductMixData> productMixDataApiJsonSerializer;
     private final ProductMixReadPlatformService productMixReadPlatformService;
     private final DropdownReadPlatformService commonDropdownReadPlatformService;
+    private final PaymentTypeReadPlatformService paymentTypeReadPlatformService;
+    private final FloatingRatesReadPlatformService floatingRateReadPlatformService;
 
     @Autowired
     public LoanProductsApiResource(final PlatformSecurityContext context, final LoanProductReadPlatformService readPlatformService,
@@ -105,11 +109,12 @@ public class LoanProductsApiResource {
             final ApiRequestParameterHelper apiRequestParameterHelper,
             final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService,
             final ProductToGLAccountMappingReadPlatformService accountMappingReadPlatformService,
-            final CodeValueReadPlatformService codeValueReadPlatformService,
             final AccountingDropdownReadPlatformService accountingDropdownReadPlatformService,
             final DefaultToApiJsonSerializer<ProductMixData> productMixDataApiJsonSerializer,
             final ProductMixReadPlatformService productMixReadPlatformService,
-            final DropdownReadPlatformService commonDropdownReadPlatformService) {
+            final DropdownReadPlatformService commonDropdownReadPlatformService,
+            PaymentTypeReadPlatformService paymentTypeReadPlatformService,
+            final FloatingRatesReadPlatformService floatingRateReadPlatformService) {
         this.context = context;
         this.loanProductReadPlatformService = readPlatformService;
         this.chargeReadPlatformService = chargeReadPlatformService;
@@ -120,11 +125,12 @@ public class LoanProductsApiResource {
         this.apiRequestParameterHelper = apiRequestParameterHelper;
         this.commandsSourceWritePlatformService = commandsSourceWritePlatformService;
         this.accountMappingReadPlatformService = accountMappingReadPlatformService;
-        this.codeValueReadPlatformService = codeValueReadPlatformService;
         this.accountingDropdownReadPlatformService = accountingDropdownReadPlatformService;
         this.productMixDataApiJsonSerializer = productMixDataApiJsonSerializer;
         this.productMixReadPlatformService = productMixReadPlatformService;
         this.commonDropdownReadPlatformService = commonDropdownReadPlatformService;
+        this.paymentTypeReadPlatformService = paymentTypeReadPlatformService;
+        this.floatingRateReadPlatformService = floatingRateReadPlatformService;
     }
 
     @POST
@@ -205,7 +211,8 @@ public class LoanProductsApiResource {
                     .accountingRuleType().getId().intValue());
             paymentChannelToFundSourceMappings = this.accountMappingReadPlatformService
                     .fetchPaymentTypeToFundSourceMappingsForLoanProduct(productId);
-            feeToGLAccountMappings = this.accountMappingReadPlatformService.fetchFeeToIncomeOrLiabilityAccountMappingsForLoanProduct(productId);
+            feeToGLAccountMappings = this.accountMappingReadPlatformService
+                    .fetchFeeToIncomeOrLiabilityAccountMappingsForLoanProduct(productId);
             penaltyToGLAccountMappings = this.accountMappingReadPlatformService
                     .fetchPenaltyToIncomeAccountMappingsForLoanProduct(productId);
             loanProduct = LoanProductData.withAccountingDetails(loanProduct, accountingMappings, paymentChannelToFundSourceMappings,
@@ -252,8 +259,7 @@ public class LoanProductsApiResource {
         final List<EnumOptionData> repaymentFrequencyTypeOptions = this.dropdownReadPlatformService.retrieveRepaymentFrequencyTypeOptions();
         final List<EnumOptionData> interestRateFrequencyTypeOptions = this.dropdownReadPlatformService
                 .retrieveInterestRateFrequencyTypeOptions();
-        final Collection<CodeValueData> paymentTypeOptions = this.codeValueReadPlatformService
-                .retrieveCodeValuesByCode(PaymentDetailConstants.paymentTypeCodeName);
+        final Collection<PaymentTypeData> paymentTypeOptions = this.paymentTypeReadPlatformService.retrieveAllPaymentTypes();
 
         Collection<FundData> fundOptions = this.fundReadPlatformService.retrieveAllFunds();
         if (fundOptions.isEmpty()) {
@@ -278,12 +284,16 @@ public class LoanProductsApiResource {
         final List<EnumOptionData> rescheduleStrategyTypeOptions = dropdownReadPlatformService.retrieveRescheduleStrategyTypeOptions();
         final List<EnumOptionData> interestRecalculationFrequencyTypeOptions = dropdownReadPlatformService
                 .retrieveInterestRecalculationFrequencyTypeOptions();
+        final List<EnumOptionData> preCloseInterestCalculationStrategyOptions = dropdownReadPlatformService
+                .retrivePreCloseInterestCalculationStrategyOptions();
+        final List<FloatingRateData> floatingRateOptions = this.floatingRateReadPlatformService.retrieveLookupActive();
 
         return new LoanProductData(productData, chargeOptions, penaltyOptions, paymentTypeOptions, currencyOptions,
                 amortizationTypeOptions, interestTypeOptions, interestCalculationPeriodTypeOptions, repaymentFrequencyTypeOptions,
                 interestRateFrequencyTypeOptions, fundOptions, transactionProcessingStrategyOptions, accountOptions,
                 accountingRuleTypeOptions, loanCycleValueConditionTypeOptions, daysInMonthTypeOptions, daysInYearTypeOptions,
-                interestRecalculationCompoundingTypeOptions, rescheduleStrategyTypeOptions, interestRecalculationFrequencyTypeOptions);
+                interestRecalculationCompoundingTypeOptions, rescheduleStrategyTypeOptions, interestRecalculationFrequencyTypeOptions,
+                preCloseInterestCalculationStrategyOptions, floatingRateOptions);
     }
 
 }

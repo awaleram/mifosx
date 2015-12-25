@@ -5,10 +5,12 @@
  */
 package org.mifosplatform.useradministration.data;
 
+import java.util.Collection;
+import java.util.Set;
+
 import org.mifosplatform.organisation.office.data.OfficeData;
 import org.mifosplatform.organisation.staff.data.StaffData;
-
-import java.util.Collection;
+import org.mifosplatform.portfolio.client.data.ClientData;
 
 /**
  * Immutable data object for application user data.
@@ -22,35 +24,42 @@ public class AppUserData {
     private final String firstname;
     private final String lastname;
     private final String email;
+    private final Boolean passwordNeverExpires;
 
     @SuppressWarnings("unused")
     private final Collection<OfficeData> allowedOffices;
     private final Collection<RoleData> availableRoles;
     private final Collection<RoleData> selectedRoles;
     private final StaffData staff;
+    private final Boolean isSelfServiceUser;
+    
+	@SuppressWarnings("unused")
+    private Set<ClientData> clients;
 
     public static AppUserData template(final AppUserData user, final Collection<OfficeData> officesForDropdown) {
         return new AppUserData(user.id, user.username, user.email, user.officeId, user.officeName, user.firstname, user.lastname,
-                user.availableRoles, user.selectedRoles, officesForDropdown, user.staff);
+                user.availableRoles, user.selectedRoles, officesForDropdown, user.staff, user.passwordNeverExpires, user.isSelfServiceUser);
     }
 
     public static AppUserData template(final Collection<OfficeData> offices, final Collection<RoleData> availableRoles) {
-        return new AppUserData(null, null, null, null, null, null, null, availableRoles, null, offices, null);
+        return new AppUserData(null, null, null, null, null, null, null, availableRoles, null, offices, null, null, null);
     }
 
     public static AppUserData dropdown(final Long id, final String username) {
-        return new AppUserData(id, username, null, null, null, null, null, null, null, null, null);
+        return new AppUserData(id, username, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static AppUserData instance(final Long id, final String username, final String email, final Long officeId,
             final String officeName, final String firstname, final String lastname, final Collection<RoleData> availableRoles,
-            final Collection<RoleData> selectedRoles, final StaffData staff) {
-        return new AppUserData(id, username, email, officeId, officeName, firstname, lastname, availableRoles, selectedRoles, null, staff);
+            final Collection<RoleData> selectedRoles, final StaffData staff, final Boolean passwordNeverExpire, final Boolean isSelfServiceUser) {
+        return new AppUserData(id, username, email, officeId, officeName, firstname, lastname, availableRoles, selectedRoles, null, staff,
+                passwordNeverExpire, isSelfServiceUser);
     }
 
     private AppUserData(final Long id, final String username, final String email, final Long officeId, final String officeName,
             final String firstname, final String lastname, final Collection<RoleData> availableRoles,
-            final Collection<RoleData> selectedRoles, final Collection<OfficeData> allowedOffices, final StaffData staff) {
+            final Collection<RoleData> selectedRoles, final Collection<OfficeData> allowedOffices, final StaffData staff,
+            final Boolean passwordNeverExpire, final Boolean isSelfServiceUser) {
         this.id = id;
         this.username = username;
         this.officeId = officeId;
@@ -62,6 +71,8 @@ public class AppUserData {
         this.availableRoles = availableRoles;
         this.selectedRoles = selectedRoles;
         this.staff = staff;
+        this.passwordNeverExpires = passwordNeverExpire;
+        this.isSelfServiceUser = isSelfServiceUser;
     }
 
     public boolean hasIdentifyOf(final Long createdById) {
@@ -88,4 +99,13 @@ public class AppUserData {
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
     }
+    
+    public void setClients(Set<ClientData> clients){
+    	this.clients = clients;
+    }
+    
+    public boolean isSelfServiceUser() {
+		return this.isSelfServiceUser==null?false:this.isSelfServiceUser;
+	}
+
 }

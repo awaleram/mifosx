@@ -35,6 +35,8 @@ public interface ConfigurationDomainService {
 
     Long retrieveGraceOnPenaltyPostingPeriod();
 
+    Long retrieveOpeningBalancesContraAccount();
+
     boolean isSavingsInterestPostingAtCurrentPeriodEnd();
 
     Integer retrieveFinancialYearBeginningMonth();
@@ -45,4 +47,7 @@ public interface ConfigurationDomainService {
 
     boolean isMeetingMandatoryForJLGLoans();
 
+    int getRoundingMode();
+
+    boolean isBackdatePenaltiesEnabled();
 }

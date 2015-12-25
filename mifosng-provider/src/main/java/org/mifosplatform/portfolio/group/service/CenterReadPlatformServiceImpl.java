@@ -68,9 +68,6 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
     private final CodeValueReadPlatformService codeValueReadPlatformService;
 
     // data mappers
-    private final AllGroupTypesDataMapper allGroupTypesDataMapper = new AllGroupTypesDataMapper();
-
-    // data mappers
     private final CenterDataMapper centerMapper = new CenterDataMapper();
     private final GroupDataMapper groupDataMapper = new GroupDataMapper();
 
@@ -139,11 +136,12 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
         return extraCriteria.toString();
     }
 
-    private static final String sqlQuery = "g.id as id, g.external_id as externalId, g.display_name as name, "
+    private static final String sqlQuery = "g.id as id, g.account_no as accountNo, g.external_id as externalId, g.display_name as name, "
             + "g.office_id as officeId, o.name as officeName, " //
             + "g.staff_id as staffId, s.display_name as staffName, " //
             + "g.status_enum as statusEnum, g.activation_date as activationDate, " //
             + "g.hierarchy as hierarchy, " //
+            + "g.level_id as groupLevel," //
             + "g.closedon_date as closedOnDate, " + "g.submittedon_date as submittedOnDate, " + "sbu.username as submittedByUsername, "
             + "sbu.firstname as submittedByFirstname, " + "sbu.lastname as submittedByLastname, " + "clu.username as closedByUsername, "
             + "clu.firstname as closedByFirstname, " + "clu.lastname as closedByLastname, " + "acu.username as activatedByUsername, "
@@ -171,6 +169,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
         public CenterData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
             final Long id = rs.getLong("id");
+            final String accountNo = rs.getString("accountNo");
             final String name = rs.getString("name");
             final Integer statusEnum = JdbcSupport.getInteger(rs, "statusEnum");
             final EnumOptionData status = GroupingTypeEnumerations.status(statusEnum);
@@ -200,7 +199,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
                     submittedByLastname, activationDate, activatedByUsername, activatedByFirstname, activatedByLastname, closedOnDate,
                     closedByUsername, closedByFirstname, closedByLastname);
 
-            return CenterData.instance(id, name, externalId, status, activationDate, officeId, officeName, staffId, staffName, hierarchy,
+            return CenterData.instance(id, accountNo, name, externalId, status, activationDate, officeId, officeName, staffId, staffName, hierarchy,
                     timeline, null);
         }
     }
@@ -211,7 +210,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
 
         public CenterCalendarDataMapper() {
 
-            schemaSql = " select g.id as id, g.display_name as name, g.office_id as officeId, g.staff_id as staffId, s.display_name as staffName, g.external_id as externalId, "
+            schemaSql = " select g.id as id, g.account_no as accountNo, g.display_name as name, g.office_id as officeId, g.staff_id as staffId, s.display_name as staffName, g.external_id as externalId, "
                     + " g.status_enum as statusEnum, g.activation_date as activationDate, g.hierarchy as hierarchy,  "
                     + " c.id as calendarId, ci.id as calendarInstanceId, ci.entity_id as entityId,  "
                     + " ci.entity_type_enum as entityTypeId, c.title as title,  c.description as description,  "
@@ -228,6 +227,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
         public CenterData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
             final Long id = rs.getLong("id");
+            final String accountNo = rs.getString("accountNo");
             final String name = rs.getString("name");
             final Integer statusEnum = JdbcSupport.getInteger(rs, "statusEnum");
             final EnumOptionData status = GroupingTypeEnumerations.status(statusEnum);
@@ -253,7 +253,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
             CalendarData calendarData = CalendarData.instance(calendarId, calendarInstanceId, entityId, entityType, title, description,
                     location, startDate, endDate, null, null, false, recurrence, null, null, null, null, null, null, null, null, null,
                     null, null, null, null);
-            return CenterData.instance(id, name, externalId, status, activationDate, officeId, null, staffId, staffName, hierarchy, null,
+            return CenterData.instance(id, accountNo, name, externalId, status, activationDate, officeId, null, staffId, staffName, hierarchy, null,
                     calendarData);
         }
     }
@@ -275,6 +275,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
         public GroupGeneralData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
             final Long id = rs.getLong("id");
+            final String accountNo = rs.getString("accountNo");
             final String name = rs.getString("name");
             final String externalId = rs.getString("externalId");
 
@@ -287,6 +288,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
             final Long staffId = JdbcSupport.getLong(rs, "staffId");
             final String staffName = rs.getString("staffName");
             final String hierarchy = rs.getString("hierarchy");
+            final String groupLevel = rs.getString("groupLevel");
 
             final LocalDate closedOnDate = JdbcSupport.getLocalDate(rs, "closedOnDate");
             final String closedByUsername = rs.getString("closedByUsername");
@@ -306,8 +308,8 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
                     submittedByLastname, activationDate, activatedByUsername, activatedByFirstname, activatedByLastname, closedOnDate,
                     closedByUsername, closedByFirstname, closedByLastname);
 
-            return GroupGeneralData.instance(id, name, externalId, status, activationDate, officeId, officeName, null, null, staffId,
-                    staffName, hierarchy, timeline);
+            return GroupGeneralData.instance(id, accountNo, name, externalId, status, activationDate, officeId, officeName, null, null, staffId,
+                    staffName, hierarchy, groupLevel, timeline);
         }
     }
 
@@ -411,31 +413,13 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
         if (CollectionUtils.isEmpty(staffOptions)) {
             staffOptions = null;
         }
-
-        Collection<GroupGeneralData> groupMembersOptions = retrieveAllGroupsForCenterDropdown(officeIdDefaulted);
-        if (CollectionUtils.isEmpty(groupMembersOptions)) {
-            groupMembersOptions = null;
-        }
+        final Collection<GroupGeneralData> groupMembersOptions = null;
+        final String accountNo = null;
 
         // final boolean clientPendingApprovalAllowed =
         // this.configurationDomainService.isClientPendingApprovalAllowedEnabled();
 
-        return CenterData.template(officeIdDefaulted, new LocalDate(), officeOptions, staffOptions, groupMembersOptions);
-    }
-
-    private Collection<GroupGeneralData> retrieveAllGroupsForCenterDropdown(final Long officeId) {
-
-        final Long defaultOfficeId = defaultToUsersOfficeIfNull(officeId);
-
-        final AppUser currentUser = this.context.authenticatedUser();
-        final String hierarchy = currentUser.getOffice().getHierarchy();
-        final String hierarchySearchString = hierarchy + "%";
-
-        final String sql = "select " + this.allGroupTypesDataMapper.schema()
-                + " where g.office_id = ? and g.parent_id is null and g.level_Id = ? and o.hierarchy like ? order by g.hierarchy";
-
-        return this.jdbcTemplate.query(sql, this.allGroupTypesDataMapper, new Object[] { defaultOfficeId, GroupTypes.GROUP.getId(),
-                hierarchySearchString });
+        return CenterData.template(officeIdDefaulted, accountNo, new LocalDate(), officeOptions, staffOptions, groupMembersOptions);
     }
 
     private Long defaultToUsersOfficeIfNull(final Long officeId) {
@@ -491,7 +475,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
             clientOptions = null;
         }
 
-        return GroupGeneralData.template(centerOfficeId, center.getId(), center.getName(), staffId, staffName, centerOptions,
+        return GroupGeneralData.template(centerOfficeId, center.getId(), center.getAccountNo(), center.getName(), staffId, staffName, centerOptions,
                 officeOptions, staffOptions, clientOptions, null);
     }
 
@@ -504,7 +488,7 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
     @Override
     public CenterData retrieveCenterWithClosureReasons() {
         final List<CodeValueData> closureReasons = new ArrayList<>(
-                this.codeValueReadPlatformService.retrieveCodeValuesByCode(GroupingTypesApiConstants.GROUP_CLOSURE_REASON));
+                this.codeValueReadPlatformService.retrieveCodeValuesByCode(GroupingTypesApiConstants.CENTER_CLOSURE_REASON));
         return CenterData.withClosureReasons(closureReasons);
     }
 
@@ -535,6 +519,8 @@ public class CenterReadPlatformServiceImpl implements CenterReadPlatformService 
                         flag = false;
                         if (staffCenterData.getStaffId().equals(centerData.staffId())) {
                             staffCenterData.getMeetingFallCenters().add(centerData);
+                 
+                            
                             flag = true;
                             break;
                         }

@@ -33,6 +33,7 @@ targetCompatibility = JavaVersion.VERSION_1_7
 
 project.ext.springBootVersion = '1.1.6.RELEASE'
 project.ext.springVersion = '4.0.7.RELEASE'
+project.ext.springOauthVersion = '2.0.4.RELEASE'
 project.ext.jerseyVersion = '1.17'
 project.ext.springDataJpaVersion = '1.7.0.RELEASE' // also change spring-boot-gradle-plugin version above
 
@@ -45,7 +46,7 @@ group = 'org.mifosplatform'
 repositories {
 	jcenter()
 	maven {
-	url  "http://nexus.pentaho.org/content/repositories/pentaho-public-release-repos/"
+	url "http://nexus.pentaho.org/content/repositories/pentaho-public-release-repos/"
     }
 	// mavenLocal() // useful for local dev using MariaDB4j SNAPSHOTs (not needed for real-world non-SNAPHOT builds)
 }
@@ -64,16 +65,36 @@ if (project.hasProperty('env') && project.getProperty('env') == 'dev') {
     apply from: 'dependencies.gradle'
 }
 
+/* Enable Oauth2 authentication based on environment, default to HTTP basic auth */
+if (project.hasProperty('security') && project.getProperty('security') == 'oauth') {
+	copy {
+	    from './properties/oauth/'
+	    into 'src/main/resources/'
+	    include '*.properties'
+	}
+}  else {
+	copy {
+	    from './properties/basicauth/'
+	    into 'src/main/resources/'
+	    include '*.properties'
+	}
+}
+
 task dist(type:Zip){
-	baseName= 'mifosplatform'
+	baseName = 'mifosplatform'
 	version = qualifyVersionIfNecessary(releaseVersion)
+    includeEmptyDirs = true
 	from('../') {
 		fileMode = 0755
 		include '*.md'
 	}
+    from('src/main/dist') {
+        fileMode = 0755
+        include '*'
+    }
 	from('../apps') {
 		fileMode = 0755
-		include '*.md'
+        include '**/*'
 		into('apps')
 	}
 	from('src/main/pentahoReports/') {
@@ -120,7 +141,7 @@ war {
 
 license {
     header rootProject.file('../LICENSE.md')
-    excludes(["**/*.mustache", "**/*.sql", "**/package-info.java", "**/keystore.jks"])
+    excludes(["**/*.html", "**/*.mustache", "**/*.sql", "**/package-info.java", "**/keystore.jks"])
     strictCheck true
 }
 
@@ -257,7 +278,8 @@ task migrateTenantDB<<{
 	
     flyway.url= "jdbc:mysql://localhost:3306/$tenantDbName"
     flyway.locations= [filePath]
-
+    /**We use ${ as the prefix for strecthy reporting, do not want them to be interpreted by Flyway**/
+    flyway.placeholderPrefix = "\$\${"
     flywayMigrate.execute()
 }
 

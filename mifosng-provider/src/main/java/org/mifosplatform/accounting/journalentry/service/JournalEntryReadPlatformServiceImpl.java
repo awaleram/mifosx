@@ -10,30 +10,42 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.LocalDate;
 import org.mifosplatform.accounting.common.AccountingEnumerations;
+import org.mifosplatform.accounting.financialactivityaccount.domain.FinancialActivityAccount;
+import org.mifosplatform.accounting.financialactivityaccount.domain.FinancialActivityAccountRepositoryWrapper;
+import org.mifosplatform.accounting.glaccount.data.GLAccountData;
+import org.mifosplatform.accounting.glaccount.domain.GLAccountType;
+import org.mifosplatform.accounting.glaccount.service.GLAccountReadPlatformService;
 import org.mifosplatform.accounting.journalentry.data.JournalEntryAssociationParametersData;
 import org.mifosplatform.accounting.journalentry.data.JournalEntryData;
+import org.mifosplatform.accounting.journalentry.data.OfficeOpeningBalancesData;
 import org.mifosplatform.accounting.journalentry.data.TransactionDetailData;
 import org.mifosplatform.accounting.journalentry.data.TransactionTypeEnumData;
 import org.mifosplatform.accounting.journalentry.exception.JournalEntriesNotFoundException;
-import org.mifosplatform.infrastructure.codes.data.CodeValueData;
 import org.mifosplatform.infrastructure.core.data.EnumOptionData;
 import org.mifosplatform.infrastructure.core.domain.JdbcSupport;
+import org.mifosplatform.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+import org.mifosplatform.infrastructure.core.service.DateUtils;
 import org.mifosplatform.infrastructure.core.service.Page;
 import org.mifosplatform.infrastructure.core.service.PaginationHelper;
 import org.mifosplatform.infrastructure.core.service.RoutingDataSource;
-import org.mifosplatform.organisation.monetary.data.CurrencyData;
-import org.mifosplatform.portfolio.account.PortfolioAccountType;
 import org.mifosplatform.infrastructure.core.service.SearchParameters;
+import org.mifosplatform.organisation.monetary.data.CurrencyData;
+import org.mifosplatform.organisation.office.data.OfficeData;
+import org.mifosplatform.organisation.office.service.OfficeReadPlatformService;
+import org.mifosplatform.portfolio.account.PortfolioAccountType;
 import org.mifosplatform.portfolio.loanaccount.data.LoanTransactionEnumData;
 import org.mifosplatform.portfolio.loanproduct.service.LoanEnumerations;
 import org.mifosplatform.portfolio.note.data.NoteData;
 import org.mifosplatform.portfolio.paymentdetail.data.PaymentDetailData;
+import org.mifosplatform.portfolio.paymenttype.data.PaymentTypeData;
 import org.mifosplatform.portfolio.savings.data.SavingsAccountTransactionEnumData;
 import org.mifosplatform.portfolio.savings.service.SavingsEnumerations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,17 +53,26 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 @Service
 public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlatformService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final GLAccountReadPlatformService glAccountReadPlatformService;
+    private final OfficeReadPlatformService officeReadPlatformService;
+    private final FinancialActivityAccountRepositoryWrapper financialActivityAccountRepositoryWrapper;
 
     private final PaginationHelper<JournalEntryData> paginationHelper = new PaginationHelper<>();
 
     @Autowired
-    public JournalEntryReadPlatformServiceImpl(final RoutingDataSource dataSource) {
+    public JournalEntryReadPlatformServiceImpl(final RoutingDataSource dataSource,
+            final GLAccountReadPlatformService glAccountReadPlatformService, final OfficeReadPlatformService officeReadPlatformService,
+            final FinancialActivityAccountRepositoryWrapper financialActivityAccountRepositoryWrapper) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.glAccountReadPlatformService = glAccountReadPlatformService;
+        this.officeReadPlatformService = officeReadPlatformService;
+        this.financialActivityAccountRepositoryWrapper = financialActivityAccountRepositoryWrapper;
     }
 
     private static final class GLJournalEntryMapper implements RowMapper<JournalEntryData> {
@@ -86,8 +107,8 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
             }
             if (associationParametersData.isTransactionDetailsRequired()) {
                 sb.append(" ,pd.receipt_number as receiptNumber, ").append(" pd.check_number as checkNumber, ")
-                        .append(" pd.account_number as accountNumber, ").append(" cdv.code_value as paymentTypeName, ")
-                        .append(" pd.payment_type_cv_id as paymentTypeId,").append(" pd.bank_number as bankNumber, ")
+                        .append(" pd.account_number as accountNumber, ").append(" pt.value as paymentTypeName, ")
+                        .append(" pd.payment_type_id as paymentTypeId,").append(" pd.bank_number as bankNumber, ")
                         .append(" pd.routing_code as routingCode, ").append(" note.id as noteId, ")
                         .append(" note.note as transactionNote, ").append(" lt.transaction_type_enum as loanTransactionType, ")
                         .append(" st.transaction_type_enum as savingsTransactionType ");
@@ -100,8 +121,8 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
             if (associationParametersData.isTransactionDetailsRequired()) {
                 sb.append(" left join m_loan_transaction as lt on journalEntry.loan_transaction_id = lt.id ")
                         .append(" left join m_savings_account_transaction as st on journalEntry.savings_transaction_id = st.id ")
-                        .append(" left join m_payment_detail as pd on lt.payment_detail_id = pd.id or st.payment_detail_id = pd.id")
-                        .append(" left join m_code_value as cdv on cdv.id = pd.payment_type_cv_id ")
+                        .append(" left join m_payment_detail as pd on lt.payment_detail_id = pd.id or st.payment_detail_id = pd.id or journalEntry.payment_details_id = pd.id")
+                        .append(" left join m_payment_type as pt on pt.id = pd.payment_type_id ")
                         .append(" left join m_note as note on lt.id = note.loan_transaction_id or st.id = note.savings_account_transaction_id ");
             }
             return sb.toString();
@@ -164,7 +185,7 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
                 final Long paymentTypeId = JdbcSupport.getLong(rs, "paymentTypeId");
                 if (paymentTypeId != null) {
                     final String typeName = rs.getString("paymentTypeName");
-                    final CodeValueData paymentType = CodeValueData.instance(paymentTypeId, typeName);
+                    final PaymentTypeData paymentType = PaymentTypeData.instance(paymentTypeId, typeName);
                     final String accountNumber = rs.getString("accountNumber");
                     final String checkNumber = rs.getString("checkNumber");
                     final String routingCode = rs.getString("routingCode");
@@ -217,7 +238,7 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
         sqlBuilder.append("select SQL_CALC_FOUND_ROWS ");
         sqlBuilder.append(rm.schema());
 
-        final Object[] objectArray = new Object[5];
+        final Object[] objectArray = new Object[15];
         int arrayPos = 0;
         String whereClose = " where ";
 
@@ -242,6 +263,14 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
         if (searchParameters.isOfficeIdPassed()) {
             sqlBuilder.append(whereClose + " journalEntry.office_id = ?");
             objectArray[arrayPos] = searchParameters.getOfficeId();
+            arrayPos = arrayPos + 1;
+
+            whereClose = " and ";
+        }
+
+        if (searchParameters.isCurrencyCodePassed()) {
+            sqlBuilder.append(whereClose + " journalEntry.currency_code = ?");
+            objectArray[arrayPos] = searchParameters.getCurrencyCode();
             arrayPos = arrayPos + 1;
 
             whereClose = " and ";
@@ -295,6 +324,23 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
             }
         }
 
+        if (searchParameters.isLoanIdPassed()) {
+            sqlBuilder.append(whereClose + " journalEntry.loan_transaction_id  in (select id from m_loan_transaction where loan_id = ?)");
+            objectArray[arrayPos] = searchParameters.getLoanId();
+            arrayPos = arrayPos + 1;
+
+            whereClose = " and ";
+        }
+        if (searchParameters.isSavingsIdPassed()) {
+            sqlBuilder
+                    .append(whereClose
+                            + " journalEntry.savings_transaction_id in (select id from m_savings_account_transaction where savings_account_id = ?)");
+            objectArray[arrayPos] = searchParameters.getSavingsId();
+            arrayPos = arrayPos + 1;
+
+            whereClose = " and ";
+        }
+
         if (searchParameters.isOrderByRequested()) {
             sqlBuilder.append(" order by ").append(searchParameters.getOrderBy());
 
@@ -333,4 +379,142 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
         }
     }
 
+    @Override
+    public OfficeOpeningBalancesData retrieveOfficeOpeningBalances(final Long officeId, String currencyCode) {
+
+        final FinancialActivityAccount financialActivityAccountId = this.financialActivityAccountRepositoryWrapper
+                .findByFinancialActivityTypeWithNotFoundDetection(300);
+        final Long contraId = financialActivityAccountId.getGlAccount().getId();
+        if (contraId == null) { throw new GeneralPlatformDomainRuleException(
+                "error.msg.financial.activity.mapping.opening.balance.contra.account.cannot.be.null",
+                "office-opening-balances-contra-account value can not be null", "office-opening-balances-contra-account"); }
+
+        final JournalEntryAssociationParametersData associationParametersData = new JournalEntryAssociationParametersData();
+        final GLAccountData contraAccount = this.glAccountReadPlatformService.retrieveGLAccountById(contraId, associationParametersData);
+        if (!GLAccountType.fromInt(contraAccount.getTypeId()).isEquityType()) { throw new GeneralPlatformDomainRuleException(
+                "error.msg.configuration.opening.balance.contra.account.value.is.invalid.account.type",
+                "Global configuration 'office-opening-balances-contra-account' value is not an equity type account", contraId); }
+
+        final OfficeData officeData = this.officeReadPlatformService.retrieveOffice(officeId);
+        final List<JournalEntryData> allOpeningTransactions = populateAllTransactionsFromGLAccounts(contraId);
+        final String contraTransactionId = retrieveContraAccountTransactionId(officeId, contraId, currencyCode);
+
+        List<JournalEntryData> existingOpeningBalanceTransactions = new ArrayList<>();
+        if (StringUtils.isNotBlank(contraTransactionId)) {
+            existingOpeningBalanceTransactions = retrieveOfficeBalanceTransactions(officeId, contraTransactionId, currencyCode);
+        }
+        final List<JournalEntryData> transactions = populateOpeningBalances(existingOpeningBalanceTransactions, allOpeningTransactions);
+        final List<JournalEntryData> assetAccountOpeningBalances = new ArrayList<>();
+        final List<JournalEntryData> liabityAccountOpeningBalances = new ArrayList<>();
+        final List<JournalEntryData> incomeAccountOpeningBalances = new ArrayList<>();
+        final List<JournalEntryData> equityAccountOpeningBalances = new ArrayList<>();
+        final List<JournalEntryData> expenseAccountOpeningBalances = new ArrayList<>();
+
+        for (final JournalEntryData journalEntryData : transactions) {
+            final GLAccountType type = GLAccountType.fromInt(journalEntryData.getGlAccountType().getId().intValue());
+            if (type.isAssetType()) {
+                assetAccountOpeningBalances.add(journalEntryData);
+            } else if (type.isLiabilityType()) {
+                liabityAccountOpeningBalances.add(journalEntryData);
+            } else if (type.isEquityType()) {
+                equityAccountOpeningBalances.add(journalEntryData);
+            } else if (type.isIncomeType()) {
+                incomeAccountOpeningBalances.add(journalEntryData);
+            } else if (type.isExpenseType()) {
+                expenseAccountOpeningBalances.add(journalEntryData);
+            }
+        }
+
+        final LocalDate transactionDate = DateUtils.getLocalDateOfTenant();
+
+        final OfficeOpeningBalancesData officeOpeningBalancesData = OfficeOpeningBalancesData.createNew(officeId, officeData.name(),
+                transactionDate, contraAccount, assetAccountOpeningBalances, liabityAccountOpeningBalances, incomeAccountOpeningBalances,
+                equityAccountOpeningBalances, expenseAccountOpeningBalances);
+        return officeOpeningBalancesData;
+    }
+
+    private List<JournalEntryData> populateOpeningBalances(final List<JournalEntryData> existingOpeningBalanceTransactions,
+            final List<JournalEntryData> allOpeningTransactions) {
+        final List<JournalEntryData> allOpeningBalnceTransactions = new ArrayList<>(allOpeningTransactions.size());
+        for (final JournalEntryData newOpeningBalanceTransaction : allOpeningTransactions) {
+            boolean isNewTransactionAddedToCollection = false;
+            for (final JournalEntryData existingOpeningBalanceTransaction : existingOpeningBalanceTransactions) {
+                if (newOpeningBalanceTransaction.getGlAccountId().equals(existingOpeningBalanceTransaction.getGlAccountId())) {
+                    allOpeningBalnceTransactions.add(existingOpeningBalanceTransaction);
+                    isNewTransactionAddedToCollection = true;
+                    break;
+                }
+            }
+            if (!isNewTransactionAddedToCollection) {
+                allOpeningBalnceTransactions.add(newOpeningBalanceTransaction);
+            }
+        }
+        return allOpeningBalnceTransactions;
+    }
+
+    private List<JournalEntryData> populateAllTransactionsFromGLAccounts(final Long contraId) {
+        final List<GLAccountData> glAccounts = this.glAccountReadPlatformService.retrieveAllEnabledDetailGLAccounts();
+        final List<JournalEntryData> openingBalanceTransactions = new ArrayList<>(glAccounts.size());
+
+        for (final GLAccountData glAccountData : glAccounts) {
+            if (!contraId.equals(glAccountData.getId())) {
+                final JournalEntryData openingBalanceTransaction = JournalEntryData.fromGLAccountData(glAccountData);
+                openingBalanceTransactions.add(openingBalanceTransaction);
+            }
+        }
+        return openingBalanceTransactions;
+    }
+
+    private List<JournalEntryData> retrieveOfficeBalanceTransactions(final Long officeId, final String transactionId,
+            final String currencyCode) {
+        final Long contraId = null;
+        return retrieveContraTransactions(officeId, contraId, transactionId, currencyCode).getPageItems();
+    }
+
+    private String retrieveContraAccountTransactionId(final Long officeId, final Long contraId, final String currencyCode) {
+        final String transactionId = "";
+        final Page<JournalEntryData> contraJournalEntries = retrieveContraTransactions(officeId, contraId, transactionId, currencyCode);
+        if (!CollectionUtils.isEmpty(contraJournalEntries.getPageItems())) {
+            final JournalEntryData contraTransaction = contraJournalEntries.getPageItems().get(
+                    contraJournalEntries.getPageItems().size() - 1);
+            return contraTransaction.getTransactionId();
+        }
+        return transactionId;
+    }
+
+    private Page<JournalEntryData> retrieveContraTransactions(final Long officeId, final Long contraId, final String transactionId,
+            final String currencyCode) {
+        final Integer offset = 0;
+        final Integer limit = null;
+        final String orderBy = "journalEntry.id";
+        final String sortOrder = "ASC";
+        final Integer entityType = null;
+        final Boolean onlyManualEntries = null;
+        final Date fromDate = null;
+        final Date toDate = null;
+        final JournalEntryAssociationParametersData associationParametersData = null;
+        final Long loanId = null;
+        final Long savingsId = null;
+
+        final SearchParameters searchParameters = SearchParameters.forJournalEntries(officeId, offset, limit, orderBy, sortOrder, loanId,
+                savingsId, currencyCode);
+        return retrieveAll(searchParameters, contraId, onlyManualEntries, fromDate, toDate, transactionId, entityType,
+                associationParametersData);
+
+    }
+
+    @Override
+    public Page<JournalEntryData> retrieveJournalEntriesByEntityId(String transactionId, Long entityId, Integer entityType) {
+        JournalEntryAssociationParametersData associationParametersData = new JournalEntryAssociationParametersData(true,
+                true);
+        try {
+            final GLJournalEntryMapper rm = new GLJournalEntryMapper(associationParametersData);
+            final String sql = "select " + rm.schema() + " where journalEntry.transaction_id = ? and journalEntry.entity_id = ? and journalEntry.entity_type_enum = ?";
+            final String sqlCountRows = "SELECT FOUND_ROWS()";
+            Object[] data = {transactionId, entityId, entityType} ;
+            return this.paginationHelper.fetchPage(this.jdbcTemplate, sqlCountRows, sql, data, rm);
+        } catch (final EmptyResultDataAccessException e) {
+            throw new JournalEntriesNotFoundException(entityId);
+        }
+    }
 }

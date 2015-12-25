@@ -31,6 +31,7 @@ import org.mifosplatform.infrastructure.core.data.ApiParameterError;
 import org.mifosplatform.infrastructure.core.data.CommandProcessingResult;
 import org.mifosplatform.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.mifosplatform.infrastructure.core.data.DataValidatorBuilder;
+import org.mifosplatform.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.mifosplatform.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.mifosplatform.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.mifosplatform.infrastructure.core.exception.PlatformServiceUnavailableException;
@@ -253,16 +254,18 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             final Throwable realCause = cve.getCause();
             // even if duplicate is only due to permission duplicate, okay to
             // show duplicate datatable error msg
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.registered", "Datatable `" + dataTableName
-                            + "` is already registered against an application table.", "dataTableName", dataTableName); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException("error.msg.datatable.registered",
+                            "Datatable `" + dataTableName + "` is already registered against an application table.", "dataTableName",
+                            dataTableName); }
         } catch (final DataIntegrityViolationException dve) {
             final Throwable realCause = dve.getMostSpecificCause();
             // even if duplicate is only due to permission duplicate, okay to
             // show duplicate datatable error msg
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.registered", "Datatable `" + dataTableName
-                            + "` is already registered against an application table.", "dataTableName", dataTableName); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException("error.msg.datatable.registered",
+                            "Datatable `" + dataTableName + "` is already registered against an application table.", "dataTableName",
+                            dataTableName); }
             logAsErrorUnexpectedDataIntegrityException(dve);
             throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
                     "Unknown data integrity issue with resource.");
@@ -362,18 +365,22 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             // org.hibernate.exception.ConstraintViolationException even though
             // it should be a DataAccessException?
             final Throwable realCause = dve.getCause();
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
-                            + "` and application table with identifier `" + appTableId + "`.", "dataTableName", dataTableName, appTableId); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
+                            "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
+                                    + "` and application table with identifier `" + appTableId + "`.",
+                            "dataTableName", dataTableName, appTableId); }
 
             logAsErrorUnexpectedDataIntegrityException(dve);
             throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
                     "Unknown data integrity issue with resource.");
         } catch (final DataAccessException dve) {
             final Throwable realCause = dve.getMostSpecificCause();
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
-                            + "` and application table with identifier `" + appTableId + "`.", "dataTableName", dataTableName, appTableId); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
+                            "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
+                                    + "` and application table with identifier `" + appTableId + "`.",
+                            "dataTableName", dataTableName, appTableId); }
 
             logAsErrorUnexpectedDataIntegrityException(dve);
             throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
@@ -404,18 +411,22 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             // org.hibernate.exception.ConstraintViolationException even though
             // it should be a DataAccessException?
             final Throwable realCause = dve.getCause();
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
-                            + "` and application table with identifier `" + appTableId + "`.", "dataTableName", dataTableName, appTableId); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
+                            "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
+                                    + "` and application table with identifier `" + appTableId + "`.",
+                            "dataTableName", dataTableName, appTableId); }
 
             logAsErrorUnexpectedDataIntegrityException(dve);
             throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
                     "Unknown data integrity issue with resource.");
         } catch (final DataAccessException dve) {
             final Throwable realCause = dve.getMostSpecificCause();
-            if (realCause.getMessage().contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
-                    "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
-                            + "` and application table with identifier `" + appTableId + "`.", "dataTableName", dataTableName, appTableId); }
+            if (realCause.getMessage()
+                    .contains("Duplicate entry")) { throw new PlatformDataIntegrityException(
+                            "error.msg.datatable.entry.duplicate", "An entry already exists for datatable `" + dataTableName
+                                    + "` and application table with identifier `" + appTableId + "`.",
+                            "dataTableName", dataTableName, appTableId); }
 
             logAsErrorUnexpectedDataIntegrityException(dve);
             throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
@@ -434,8 +445,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
         final String sql = "select if((exists (select 1 from information_schema.tables where table_schema = schema() and table_name = ?)) = 1, 'true', 'false')";
         final String dataTableExistsString = this.jdbcTemplate.queryForObject(sql, String.class, new Object[] { datatableName });
         final boolean dataTableExists = new Boolean(dataTableExistsString);
-        if (!dataTableExists) { throw new PlatformDataIntegrityException("error.msg.invalid.datatable", "Invalid Data Table: "
-                + datatableName, "name", datatableName); }
+        if (!dataTableExists) { throw new PlatformDataIntegrityException("error.msg.invalid.datatable",
+                "Invalid Data Table: " + datatableName, "name", datatableName); }
     }
 
     private void validateDatatableName(final String name) {
@@ -488,12 +499,11 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                 sqlBuilder = sqlBuilder.append("(11)");
             }
         }
-        if (mandatory != null) {
-            if (mandatory) {
-                sqlBuilder = sqlBuilder.append(" NOT NULL");
-            } else {
-                sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
-            }
+
+        if (mandatory) {
+            sqlBuilder = sqlBuilder.append(" NOT NULL");
+        } else {
+            sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
         }
 
         sqlBuilder = sqlBuilder.append(", ");
@@ -540,8 +550,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             sqlBuilder = sqlBuilder.append("CREATE TABLE `" + datatableName + "` (");
 
             if (multiRow) {
-                sqlBuilder = sqlBuilder.append("`id` BIGINT(20) NOT NULL AUTO_INCREMENT, ").append(
-                        "`" + fkColumnName + "` BIGINT(20) NOT NULL, ");
+                sqlBuilder = sqlBuilder.append("`id` BIGINT(20) NOT NULL AUTO_INCREMENT, ")
+                        .append("`" + fkColumnName + "` BIGINT(20) NOT NULL, ");
             } else {
                 sqlBuilder = sqlBuilder.append("`" + fkColumnName + "` BIGINT(20) NOT NULL, ");
             }
@@ -617,8 +627,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                         removeMappings.add(dataTableNameAlias + "_" + name);
                         constrainBuilder.append(", DROP FOREIGN KEY `fk_").append(dataTableNameAlias).append("_").append(name).append("` ");
                         codeMappings.put(dataTableNameAlias + "_" + newName, (long) codeId);
-                        constrainBuilder.append(",ADD CONSTRAINT  `fk_").append(dataTableNameAlias).append("_").append(newName)
-                                .append("` ").append("FOREIGN KEY (`" + newName + "`) ").append("REFERENCES `").append(CODE_VALUES_TABLE)
+                        constrainBuilder.append(",ADD CONSTRAINT  `fk_").append(dataTableNameAlias).append("_").append(newName).append("` ")
+                                .append("FOREIGN KEY (`" + newName + "`) ").append("REFERENCES `").append(CODE_VALUES_TABLE)
                                 .append("` (`id`)");
                     }
 
@@ -666,13 +676,12 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             }
         }
 
-        if (mandatory != null) {
-            if (mandatory) {
-                sqlBuilder = sqlBuilder.append(" NOT NULL");
-            } else {
-                sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
-            }
+        if (mandatory) {
+            sqlBuilder = sqlBuilder.append(" NOT NULL");
+        } else {
+            sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
         }
+
         if (after != null) {
             sqlBuilder = sqlBuilder.append(" AFTER `" + after + "`");
         }
@@ -724,13 +733,13 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                 sqlBuilder = sqlBuilder.append("(11)");
             }
         }
-        if (mandatory != null) {
-            if (mandatory) {
-                sqlBuilder = sqlBuilder.append(" NOT NULL");
-            } else {
-                sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
-            }
+
+        if (mandatory) {
+            sqlBuilder = sqlBuilder.append(" NOT NULL");
+        } else {
+            sqlBuilder = sqlBuilder.append(" DEFAULT NULL");
         }
+
         if (after != null) {
             sqlBuilder = sqlBuilder.append(" AFTER `" + after + "`");
         }
@@ -937,8 +946,10 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                     // "invalid use of null value" SQL exception message
                     // throw a 503 HTTP error -
                     // PlatformServiceUnavailableException
-                    if (e.getMessage().toLowerCase().contains("invalid use of null value")) { throw new PlatformServiceUnavailableException(
-                            "error.msg.datatable.column.update.not.allowed", "One of the data table columns contains null values"); }
+                    if (e.getMessage().toLowerCase()
+                            .contains("invalid use of null value")) { throw new PlatformServiceUnavailableException(
+                                    "error.msg.datatable.column.update.not.allowed",
+                                    "One of the data table columns contains null values"); }
                 }
             }
         } catch (final SQLGrammarException e) {
@@ -966,6 +977,7 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             this.context.authenticatedUser();
             if (!isRegisteredDataTable(datatableName)) { throw new DatatableNotFoundException(datatableName); }
             validateDatatableName(datatableName);
+            assertDataTableEmpty(datatableName);
             deregisterDatatable(datatableName);
             String[] sqlArray = null;
             if (this.configurationDomainService.isConstraintApproachEnabledForDatatables()) {
@@ -991,9 +1003,17 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
         }
     }
 
+    private void assertDataTableEmpty(final String datatableName) {
+        final String sql = "select count(*) from `" + datatableName + "`";
+        final int rowCount = this.jdbcTemplate.queryForObject(sql, Integer.class);
+        if (rowCount != 0) { throw new GeneralPlatformDomainRuleException("error.msg.non.empty.datatable.cannot.be.deleted",
+                "Non-empty datatable cannot be deleted."); }
+    }
+
     @Transactional
     @Override
-    public CommandProcessingResult updateDatatableEntryOneToOne(final String dataTableName, final Long appTableId, final JsonCommand command) {
+    public CommandProcessingResult updateDatatableEntryOneToOne(final String dataTableName, final Long appTableId,
+            final JsonCommand command) {
 
         return updateDatatableEntry(dataTableName, appTableId, null, command);
     }
@@ -1184,14 +1204,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
         if (appTable.equalsIgnoreCase("m_loan")) {
             scopedSQL = "select  distinctrow x.* from ("
                     + " (select o.id as officeId, l.group_id as groupId, l.client_id as clientId, null as savingsId, l.id as loanId, null as entityId from m_loan l "
-                    + " join m_client c on c.id = l.client_id "
-                    + " join m_office o on o.id = c.office_id and o.hierarchy like '"
-                    + currentUser.getOffice().getHierarchy()
-                    + "%'"
-                    + " where l.id = "
-                    + appTableId
-                    + ")"
-                    + " union all "
+                    + " join m_client c on c.id = l.client_id " + " join m_office o on o.id = c.office_id and o.hierarchy like '"
+                    + currentUser.getOffice().getHierarchy() + "%'" + " where l.id = " + appTableId + ")" + " union all "
                     + " (select o.id as officeId, l.group_id as groupId, l.client_id as clientId, null as savingsId, l.id as loanId, null as entityId from m_loan l "
                     + " join m_group g on g.id = l.group_id " + " join m_office o on o.id = g.office_id and o.hierarchy like '"
                     + currentUser.getOffice().getHierarchy() + "%'" + " where l.id = " + appTableId + ")" + " ) x";
@@ -1199,30 +1213,20 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
         if (appTable.equalsIgnoreCase("m_savings_account")) {
             scopedSQL = "select  distinctrow x.* from ("
                     + " (select o.id as officeId, s.group_id as groupId, s.client_id as clientId, s.id as savingsId, null as loanId, null as entityId from m_savings_account s "
-                    + " join m_client c on c.id = s.client_id "
-                    + " join m_office o on o.id = c.office_id and o.hierarchy like '"
-                    + currentUser.getOffice().getHierarchy()
-                    + "%'"
-                    + " where s.id = "
-                    + appTableId
-                    + ")"
-                    + " union all "
+                    + " join m_client c on c.id = s.client_id " + " join m_office o on o.id = c.office_id and o.hierarchy like '"
+                    + currentUser.getOffice().getHierarchy() + "%'" + " where s.id = " + appTableId + ")" + " union all "
                     + " (select o.id as officeId, s.group_id as groupId, s.client_id as clientId, s.id as savingsId, null as loanId, null as entityId from m_savings_account s "
                     + " join m_group g on g.id = s.group_id " + " join m_office o on o.id = g.office_id and o.hierarchy like '"
                     + currentUser.getOffice().getHierarchy() + "%'" + " where s.id = " + appTableId + ")" + " ) x";
         }
         if (appTable.equalsIgnoreCase("m_client")) {
             scopedSQL = "select o.id as officeId, null as groupId, c.id as clientId, null as savingsId, null as loanId, null as entityId from m_client c "
-                    + " join m_office o on o.id = c.office_id and o.hierarchy like '"
-                    + currentUser.getOffice().getHierarchy()
-                    + "%'"
+                    + " join m_office o on o.id = c.office_id and o.hierarchy like '" + currentUser.getOffice().getHierarchy() + "%'"
                     + " where c.id = " + appTableId;
         }
         if (appTable.equalsIgnoreCase("m_group") || appTable.equalsIgnoreCase("m_center")) {
             scopedSQL = "select o.id as officeId, g.id as groupId, null as clientId, null as savingsId, null as loanId, null as entityId from m_group g "
-                    + " join m_office o on o.id = g.office_id and o.hierarchy like '"
-                    + currentUser.getOffice().getHierarchy()
-                    + "%'"
+                    + " join m_office o on o.id = g.office_id and o.hierarchy like '" + currentUser.getOffice().getHierarchy() + "%'"
                     + " where g.id = " + appTableId;
         }
         if (appTable.equalsIgnoreCase("m_office")) {
@@ -1235,8 +1239,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                     + appTable + " as p WHERE p.id = " + appTableId;
         }
 
-        if (scopedSQL == null) { throw new PlatformDataIntegrityException("error.msg.invalid.dataScopeCriteria", "Application Table: "
-                + appTable + " not catered for in data Scoping"); }
+        if (scopedSQL == null) { throw new PlatformDataIntegrityException("error.msg.invalid.dataScopeCriteria",
+                "Application Table: " + appTable + " not catered for in data Scoping"); }
 
         return scopedSQL;
 
@@ -1503,8 +1507,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             // ignores id and foreign key fields
             // also ignores locale and dateformat fields that are used for
             // validating numeric and date data
-            if (!((key.equalsIgnoreCase("id")) || (key.equalsIgnoreCase(keyFieldName)) || (key.equals("locale")) || (key
-                    .equals("dateFormat")))) {
+            if (!((key.equalsIgnoreCase("id")) || (key.equalsIgnoreCase(keyFieldName)) || (key.equals("locale"))
+                    || (key.equals("dateFormat")))) {
                 notFound = true;
                 // matches incoming fields with and without underscores (spaces
                 // and underscores considered the same)
@@ -1591,8 +1595,8 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
                     paramValue = tmpDate.toString();
                 }
             } else if (columnHeader.isDateTimeDisplayType()) {
-                final LocalDateTime tmpDateTime = JsonParserHelper.convertDateTimeFrom(paramValue, columnHeader.getColumnName(),
-                        dateFormat, clientApplicationLocale);
+                final LocalDateTime tmpDateTime = JsonParserHelper.convertDateTimeFrom(paramValue, columnHeader.getColumnName(), dateFormat,
+                        clientApplicationLocale);
                 if (tmpDateTime == null) {
                     paramValue = null;
                 } else {
@@ -1616,9 +1620,11 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
 
                 final Boolean tmpBoolean = BooleanUtils.toBooleanObject(paramValue);
                 if (tmpBoolean == null) {
-                    final ApiParameterError error = ApiParameterError.parameterError("validation.msg.invalid.boolean.format",
-                            "The parameter " + columnHeader.getColumnName() + " has value: " + paramValue
-                                    + " which is invalid boolean value.", columnHeader.getColumnName(), paramValue);
+                    final ApiParameterError error = ApiParameterError
+                            .parameterError(
+                                    "validation.msg.invalid.boolean.format", "The parameter " + columnHeader.getColumnName()
+                                            + " has value: " + paramValue + " which is invalid boolean value.",
+                                    columnHeader.getColumnName(), paramValue);
                     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
                     dataValidationErrors.add(error);
                     throw new PlatformApiDataValidationException("validation.msg.validation.errors.exist", "Validation errors exist.",
@@ -1628,8 +1634,9 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             } else if (columnHeader.isString()) {
                 if (paramValue.length() > columnHeader.getColumnLength()) {
                     final ApiParameterError error = ApiParameterError.parameterError(
-                            "validation.msg.datatable.entry.column.exceeds.maxlength", "The column `" + columnHeader.getColumnName()
-                                    + "` exceeds its defined max-length ", columnHeader.getColumnName(), paramValue);
+                            "validation.msg.datatable.entry.column.exceeds.maxlength",
+                            "The column `" + columnHeader.getColumnName() + "` exceeds its defined max-length ",
+                            columnHeader.getColumnName(), paramValue);
                     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
                     dataValidationErrors.add(error);
                     throw new PlatformApiDataValidationException("validation.msg.validation.errors.exist", "Validation errors exist.",

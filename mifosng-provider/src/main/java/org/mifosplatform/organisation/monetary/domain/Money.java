@@ -74,19 +74,25 @@ public class Money implements Comparable<Money> {
         // round monetary amounts into multiplesof say 20/50.
         if (inMultiplesOf != null && this.currencyDigitsAfterDecimal == 0 && inMultiplesOf > 0 && amountScaled.doubleValue() > 0) {
             final double existingVal = amountScaled.doubleValue();
-            final double ceilingOfValue = ceiling(existingVal, inMultiplesOf);
-            final double floorOfValue = floor(existingVal, inMultiplesOf);
-
-            final double floorDiff = existingVal - floorOfValue;
-            final double ceilDiff = ceilingOfValue - existingVal;
-
-            if (ceilDiff > floorDiff) {
-                amountScaled = BigDecimal.valueOf(floorOfValue);
-            } else {
-                amountScaled = BigDecimal.valueOf(ceilingOfValue);
-            }
+            amountScaled = BigDecimal.valueOf(roundToMultiplesOf(existingVal, inMultiplesOf));
         }
-        this.amount = amountScaled.setScale(this.currencyDigitsAfterDecimal, RoundingMode.HALF_EVEN);
+        this.amount = amountScaled.setScale(this.currencyDigitsAfterDecimal, MoneyHelper.getRoundingMode());
+    }
+
+    public static double roundToMultiplesOf(final double existingVal, final Integer inMultiplesOf) {
+        double amountScaled = existingVal;
+        final double ceilingOfValue = ceiling(existingVal, inMultiplesOf);
+        final double floorOfValue = floor(existingVal, inMultiplesOf);
+
+        final double floorDiff = existingVal - floorOfValue;
+        final double ceilDiff = ceilingOfValue - existingVal;
+
+        if (ceilDiff > floorDiff) {
+            amountScaled = floorOfValue;
+        } else {
+            amountScaled = ceilingOfValue;
+        }
+        return amountScaled;
     }
 
     public static double ceiling(final double n, final double s) {
@@ -218,11 +224,15 @@ public class Money implements Comparable<Money> {
         return this.multiplyRetainScale(BigDecimal.valueOf(valueToMultiplyBy), roundingMode);
     }
 
+    public Money percentageOf(BigDecimal percentage, final RoundingMode roundingMode) {
+        final BigDecimal newAmount = (this.amount.multiply(percentage)).divide(BigDecimal.valueOf(100), roundingMode);
+        return Money.of(monetaryCurrency(), newAmount);
+    }
     @Override
     public int compareTo(final Money other) {
         final Money otherMoney = other;
-        if (this.currencyCode.equals(otherMoney.currencyCode) == false) { throw new UnsupportedOperationException(
-                "currencies arent different"); }
+        if (this.currencyCode
+                .equals(otherMoney.currencyCode) == false) { throw new UnsupportedOperationException("currencies arent different"); }
         return this.amount.compareTo(otherMoney.amount);
     }
 

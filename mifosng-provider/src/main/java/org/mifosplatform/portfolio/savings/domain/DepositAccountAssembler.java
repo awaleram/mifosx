@@ -67,6 +67,7 @@ import org.mifosplatform.portfolio.group.exception.ClientNotInGroupException;
 import org.mifosplatform.portfolio.group.exception.GroupNotActiveException;
 import org.mifosplatform.portfolio.interestratechart.domain.InterestRateChart;
 import org.mifosplatform.portfolio.paymentdetail.domain.PaymentDetail;
+import org.mifosplatform.portfolio.paymentdetail.domain.PaymentDetailAssembler;
 import org.mifosplatform.portfolio.savings.DepositAccountOnClosureType;
 import org.mifosplatform.portfolio.savings.DepositAccountType;
 import org.mifosplatform.portfolio.savings.SavingsCompoundingInterestPeriodType;
@@ -101,6 +102,7 @@ public class DepositAccountAssembler {
     private final SavingsAccountChargeAssembler savingsAccountChargeAssembler;
     private final FromJsonHelper fromApiJsonHelper;
     private final DepositProductAssembler depositProductAssembler;
+    private final PaymentDetailAssembler paymentDetailAssembler;
 
     @Autowired
     public DepositAccountAssembler(final SavingsAccountTransactionSummaryWrapper savingsAccountTransactionSummaryWrapper,
@@ -110,7 +112,8 @@ public class DepositAccountAssembler {
             final SavingsAccountChargeAssembler savingsAccountChargeAssembler, final FromJsonHelper fromApiJsonHelper,
             final DepositProductAssembler depositProductAssembler,
             final RecurringDepositProductRepository recurringDepositProductRepository,
-            final AccountTransfersReadPlatformService accountTransfersReadPlatformService, final PlatformSecurityContext context) {
+            final AccountTransfersReadPlatformService accountTransfersReadPlatformService, final PlatformSecurityContext context,
+            final PaymentDetailAssembler paymentDetailAssembler) {
 
         this.savingsAccountTransactionSummaryWrapper = savingsAccountTransactionSummaryWrapper;
         this.clientRepository = clientRepository;
@@ -124,6 +127,7 @@ public class DepositAccountAssembler {
         this.recurringDepositProductRepository = recurringDepositProductRepository;
         this.savingsHelper = new SavingsHelper(accountTransfersReadPlatformService);
         this.context = context;
+        this.paymentDetailAssembler = paymentDetailAssembler;
     }
 
     /**
@@ -392,13 +396,12 @@ public class DepositAccountAssembler {
         return depositAccountRecurringDetail;
     }
 
-    public Collection<SavingsAccountTransactionDTO> assembleBulkMandatorySavingsAccountTransactionDTOs(final JsonCommand command) {
+    public Collection<SavingsAccountTransactionDTO> assembleBulkMandatorySavingsAccountTransactionDTOs(final JsonCommand command,final PaymentDetail paymentDetail) {
         AppUser user = getAppUserIfPresent();
         final String json = command.json();
         if (StringUtils.isBlank(json)) { throw new InvalidJsonException(); }
         final JsonElement element = this.fromApiJsonHelper.parse(json);
         final Collection<SavingsAccountTransactionDTO> savingsAccountTransactions = new ArrayList<>();
-        final PaymentDetail paymentDetail = null;
         final LocalDate transactionDate = this.fromApiJsonHelper.extractLocalDateNamed(transactionDateParamName, element);
         final String dateFormat = this.fromApiJsonHelper.extractDateFormatParameter(element.getAsJsonObject());
         final JsonObject topLevelJsonElement = element.getAsJsonObject();
@@ -415,8 +418,12 @@ public class DepositAccountAssembler {
                     final Long savingsId = this.fromApiJsonHelper.extractLongNamed(savingsIdParamName, savingsTransactionElement);
                     final BigDecimal dueAmount = this.fromApiJsonHelper.extractBigDecimalNamed(transactionAmountParamName,
                             savingsTransactionElement, locale);
+                    PaymentDetail detail = paymentDetail;
+                    if (paymentDetail == null) {
+                        detail = this.paymentDetailAssembler.fetchPaymentDetail(savingsTransactionElement);
+                    }
                     final SavingsAccountTransactionDTO savingsAccountTransactionDTO = new SavingsAccountTransactionDTO(formatter,
-                            transactionDate, dueAmount, paymentDetail, new Date(), savingsId, user);
+                            transactionDate, dueAmount, detail, new Date(), savingsId, user);
                     savingsAccountTransactions.add(savingsAccountTransactionDTO);
                 }
             }

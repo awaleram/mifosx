@@ -13,7 +13,7 @@ import static org.mifosplatform.portfolio.account.api.AccountTransfersApiConstan
 import static org.mifosplatform.portfolio.account.api.AccountTransfersApiConstants.transferDateParamName;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -32,12 +32,12 @@ import org.mifosplatform.portfolio.account.domain.AccountTransferDetails;
 import org.mifosplatform.portfolio.account.domain.AccountTransferRepository;
 import org.mifosplatform.portfolio.account.domain.AccountTransferTransaction;
 import org.mifosplatform.portfolio.account.domain.AccountTransferType;
+import org.mifosplatform.portfolio.loanaccount.data.HolidayDetailDTO;
 import org.mifosplatform.portfolio.loanaccount.domain.Loan;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanTransaction;
 import org.mifosplatform.portfolio.loanaccount.domain.LoanTransactionType;
 import org.mifosplatform.portfolio.loanaccount.exception.InvalidPaidInAdvanceAmountException;
-import org.mifosplatform.portfolio.loanaccount.exception.InvalidRefundDateException;
 import org.mifosplatform.portfolio.loanaccount.service.LoanAssembler;
 import org.mifosplatform.portfolio.loanaccount.service.LoanReadPlatformService;
 import org.mifosplatform.portfolio.paymentdetail.domain.PaymentDetail;
@@ -146,10 +146,12 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
             final Long toLoanAccountId = command.longValueOfParameterNamed(toAccountIdParamName);
             final Loan toLoanAccount = this.loanAccountAssembler.assembleFrom(toLoanAccountId);
 
+            final Boolean isHolidayValidationDone = false;
+            final HolidayDetailDTO holidayDetailDto = null;
             final boolean isRecoveryRepayment = false;
             final LoanTransaction loanRepaymentTransaction = this.loanAccountDomainService.makeRepayment(toLoanAccount,
                     new CommandProcessingResultBuilder(), transactionDate, transactionAmount, paymentDetail, null, null,
-                    isRecoveryRepayment, isAccountTransfer);
+                    isRecoveryRepayment, isAccountTransfer, holidayDetailDto, isHolidayValidationDone);
 
             final AccountTransferDetails accountTransferDetails = this.accountTransferAssembler.assembleSavingsToLoanTransfer(command,
                     fromSavingsAccount, toLoanAccount, withdrawal, loanRepaymentTransaction);
@@ -199,6 +201,19 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
         List<AccountTransferTransaction> acccountTransfers = null;
         if (accountTypeId.isLoanAccount()) {
             acccountTransfers = this.accountTransferRepository.findByFromLoanId(accountNumber);
+        }
+        if (acccountTransfers != null && acccountTransfers.size() > 0) {
+            undoTransactions(acccountTransfers);
+        }
+
+    }
+    
+    @Override
+    @Transactional
+    public void reverseTransfersWithFromAccountTransactions(final Collection<Long> fromTransactionIds, final PortfolioAccountType accountTypeId) {
+        List<AccountTransferTransaction> acccountTransfers = null;
+        if (accountTypeId.isLoanAccount()) {
+            acccountTransfers = this.accountTransferRepository.findByFromLoanTransactions(fromTransactionIds);
         }
         if (acccountTransfers != null && acccountTransfers.size() > 0) {
             undoTransactions(acccountTransfers);
@@ -292,9 +307,11 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
 
             } else {
                 final boolean isRecoveryRepayment = false;
+                final Boolean isHolidayValidationDone=false;
+                final HolidayDetailDTO holidayDetailDto=null;
                 loanTransaction = this.loanAccountDomainService.makeRepayment(toLoanAccount, new CommandProcessingResultBuilder(),
                         accountTransferDTO.getTransactionDate(), accountTransferDTO.getTransactionAmount(),
-                        accountTransferDTO.getPaymentDetail(), null, null, isRecoveryRepayment, isAccountTransfer);
+                        accountTransferDTO.getPaymentDetail(), null, null, isRecoveryRepayment, isAccountTransfer,holidayDetailDto,isHolidayValidationDone);
             }
 
             accountTransferDetails = this.accountTransferAssembler.assembleSavingsToLoanTransfer(accountTransferDTO, fromSavingsAccount,

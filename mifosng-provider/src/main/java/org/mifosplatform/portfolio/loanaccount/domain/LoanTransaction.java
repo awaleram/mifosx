@@ -5,26 +5,6 @@
  */
 package org.mifosplatform.portfolio.loanaccount.domain;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-import javax.persistence.UniqueConstraint;
-
 import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
 import org.joda.time.LocalDate;
@@ -42,6 +22,26 @@ import org.mifosplatform.portfolio.paymentdetail.data.PaymentDetailData;
 import org.mifosplatform.portfolio.paymentdetail.domain.PaymentDetail;
 import org.mifosplatform.useradministration.domain.AppUser;
 import org.springframework.data.jpa.domain.AbstractPersistable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.UniqueConstraint;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * All monetary transactions against a loan are modelled through this entity.
@@ -118,6 +118,11 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
 
     @Column(name = "manually_adjusted_or_reversed", nullable = false)
     private boolean manuallyAdjustedOrReversed;
+
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany(cascade = CascadeType.ALL,  orphanRemoval = true)
+    @JoinColumn(name = "loan_transaction_id", referencedColumnName= "id" , nullable = false)
+    private Set<LoanTransactionToRepaymentScheduleMapping> loanTransactionToRepaymentScheduleMappings = new HashSet<>();
 
     protected LoanTransaction() {
         this.loan = null;
@@ -313,6 +318,7 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
 
     public void reverse() {
         this.reversed = true;
+        this.loanTransactionToRepaymentScheduleMappings.clear();
     }
 
     public void resetDerivedComponents() {
@@ -572,7 +578,7 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
             for (final LoanChargePaidBy chargePaidBy : this.loanChargesPaid) {
                 final Map<String, Object> loanChargePaidData = new LinkedHashMap<>();
                 loanChargePaidData.put("chargeId", chargePaidBy.getLoanCharge().getCharge().getId());
-                loanChargePaidData.put("isPenalty", chargePaidBy.getLoanCharge().getCharge().isPenalty());
+                loanChargePaidData.put("isPenalty", chargePaidBy.getLoanCharge().isPenaltyCharge());
                 loanChargePaidData.put("loanChargeId", chargePaidBy.getLoanCharge().getId());
                 loanChargePaidData.put("amount", chargePaidBy.getAmount());
 
@@ -611,6 +617,16 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
     public boolean isAccrual() {
         return LoanTransactionType.ACCRUAL.equals(getTypeOf()) && isNotReversed();
     }
+    
+    public boolean isNonMonetaryTransaction(){
+    	return isNotReversed() 
+    			&& (LoanTransactionType.CONTRA.equals(getTypeOf())
+    					|| LoanTransactionType.MARKED_FOR_RESCHEDULING.equals(getTypeOf())
+    					|| LoanTransactionType.APPROVE_TRANSFER.equals(getTypeOf())
+    					|| LoanTransactionType.INITIATE_TRANSFER.equals(getTypeOf())
+    					|| LoanTransactionType.REJECT_TRANSFER.equals(getTypeOf())
+    					|| LoanTransactionType.WITHDRAW_TRANSFER.equals(getTypeOf()));
+    }
 
     public void updateOutstandingLoanBalance(BigDecimal outstandingLoanBalance) {
         this.outstandingLoanBalance = outstandingLoanBalance;
@@ -641,6 +657,10 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
         return new LocalDate(this.createdDate);
     }
 
+    public LocalDateTime getCreatedDateTime() {
+        return new LocalDateTime(this.createdDate);
+    }
+
     public boolean isLastTransaction(final LoanTransaction loanTransaction) {
         boolean isLatest = false;
         if (loanTransaction != null) {
@@ -658,4 +678,40 @@ public final class LoanTransaction extends AbstractPersistable<Long> {
         }
         return isLatest;
     }
+
+    public void updateLoanTransactionToRepaymentScheduleMappings(final Collection<LoanTransactionToRepaymentScheduleMapping> mappings) {
+        Collection<LoanTransactionToRepaymentScheduleMapping> retainMappings = new ArrayList<>();
+        for (LoanTransactionToRepaymentScheduleMapping updatedrepaymentScheduleMapping : mappings) {
+            updateMapingDetail(retainMappings, updatedrepaymentScheduleMapping);
+        }
+        this.loanTransactionToRepaymentScheduleMappings.retainAll(retainMappings);
+    }
+
+    private boolean updateMapingDetail(final Collection<LoanTransactionToRepaymentScheduleMapping> retainMappings,
+            final LoanTransactionToRepaymentScheduleMapping updatedrepaymentScheduleMapping) {
+        boolean isMappingUpdated = false;
+        for (LoanTransactionToRepaymentScheduleMapping repaymentScheduleMapping : this.loanTransactionToRepaymentScheduleMappings) {
+            if (updatedrepaymentScheduleMapping.getLoanRepaymentScheduleInstallment().getId() != null
+                    && repaymentScheduleMapping.getLoanRepaymentScheduleInstallment().getDueDate()
+                            .equals(updatedrepaymentScheduleMapping.getLoanRepaymentScheduleInstallment().getDueDate())) {
+                repaymentScheduleMapping.setComponents(updatedrepaymentScheduleMapping.getPrincipalPortion(),
+                        updatedrepaymentScheduleMapping.getInterestPortion(), updatedrepaymentScheduleMapping.getFeeChargesPortion(),
+                        updatedrepaymentScheduleMapping.getPenaltyChargesPortion());
+                isMappingUpdated = true;
+                retainMappings.add(repaymentScheduleMapping);
+                break;
+            }
+        }
+        if (!isMappingUpdated) {
+            this.loanTransactionToRepaymentScheduleMappings.add(updatedrepaymentScheduleMapping);
+            retainMappings.add(updatedrepaymentScheduleMapping);
+        }
+        return isMappingUpdated;
+    }
+
+    
+    public Set<LoanTransactionToRepaymentScheduleMapping> getLoanTransactionToRepaymentScheduleMappings() {
+        return this.loanTransactionToRepaymentScheduleMappings;
+    }
+
 }

@@ -8,6 +8,7 @@ package org.mifosplatform.portfolio.loanaccount.data;
 import org.joda.time.LocalDate;
 import org.mifosplatform.organisation.monetary.domain.ApplicationCurrency;
 import org.mifosplatform.portfolio.calendar.domain.CalendarInstance;
+import org.mifosplatform.portfolio.floatingrates.data.FloatingRateDTO;
 import org.mifosplatform.portfolio.loanaccount.loanschedule.domain.LoanScheduleGeneratorFactory;
 
 public class ScheduleGeneratorDTO {
@@ -17,38 +18,42 @@ public class ScheduleGeneratorDTO {
     final LocalDate calculatedRepaymentsStartingFromDate;
     final HolidayDetailDTO holidayDetailDTO;
     final CalendarInstance calendarInstanceForInterestRecalculation;
+    final CalendarInstance compoundingCalendarInstance;
     LocalDate recalculateFrom;
     final Long overdurPenaltyWaitPeriod;
-    LocalDate lastTransactionDate;
-
-    public ScheduleGeneratorDTO(final LoanScheduleGeneratorFactory loanScheduleFactory, final ApplicationCurrency applicationCurrency,
-            final LocalDate calculatedRepaymentsStartingFromDate, final HolidayDetailDTO holidayDetailDTO) {
-
-        this.loanScheduleFactory = loanScheduleFactory;
-        this.applicationCurrency = applicationCurrency;
-        this.calculatedRepaymentsStartingFromDate = calculatedRepaymentsStartingFromDate;
-        this.calendarInstanceForInterestRecalculation = null;
-        this.recalculateFrom = null;
-        this.overdurPenaltyWaitPeriod = null;
-        this.lastTransactionDate = null;
-        this.holidayDetailDTO = holidayDetailDTO;
-
-    }
+    final FloatingRateDTO floatingRateDTO;
 
     public ScheduleGeneratorDTO(final LoanScheduleGeneratorFactory loanScheduleFactory, final ApplicationCurrency applicationCurrency,
             final LocalDate calculatedRepaymentsStartingFromDate, final HolidayDetailDTO holidayDetailDTO,
-            final CalendarInstance calendarInstanceForInterestRecalculation, final LocalDate recalculateFrom,
-            final Long overdurPenaltyWaitPeriod, final LocalDate lastTransactionDate) {
+            final CalendarInstance calendarInstanceForInterestRecalculation, final CalendarInstance compoundingCalendarInstance,
+            final FloatingRateDTO floatingRateDTO) {
 
         this.loanScheduleFactory = loanScheduleFactory;
         this.applicationCurrency = applicationCurrency;
         this.calculatedRepaymentsStartingFromDate = calculatedRepaymentsStartingFromDate;
         this.calendarInstanceForInterestRecalculation = calendarInstanceForInterestRecalculation;
+        this.compoundingCalendarInstance = compoundingCalendarInstance;
+        this.recalculateFrom = null;
+        this.overdurPenaltyWaitPeriod = null;
+        this.holidayDetailDTO = holidayDetailDTO;
+        this.floatingRateDTO = floatingRateDTO;
+
+    }
+
+    public ScheduleGeneratorDTO(final LoanScheduleGeneratorFactory loanScheduleFactory, final ApplicationCurrency applicationCurrency,
+            final LocalDate calculatedRepaymentsStartingFromDate, final HolidayDetailDTO holidayDetailDTO,
+            final CalendarInstance calendarInstanceForInterestRecalculation, final CalendarInstance compoundingCalendarInstance,
+            final LocalDate recalculateFrom, final Long overdurPenaltyWaitPeriod, final FloatingRateDTO floatingRateDTO) {
+
+        this.loanScheduleFactory = loanScheduleFactory;
+        this.applicationCurrency = applicationCurrency;
+        this.calculatedRepaymentsStartingFromDate = calculatedRepaymentsStartingFromDate;
+        this.calendarInstanceForInterestRecalculation = calendarInstanceForInterestRecalculation;
+        this.compoundingCalendarInstance = compoundingCalendarInstance;
         this.recalculateFrom = recalculateFrom;
         this.overdurPenaltyWaitPeriod = overdurPenaltyWaitPeriod;
-        this.lastTransactionDate = lastTransactionDate;
         this.holidayDetailDTO = holidayDetailDTO;
-
+        this.floatingRateDTO = floatingRateDTO;
     }
 
     public LoanScheduleGeneratorFactory getLoanScheduleFactory() {
@@ -83,10 +88,6 @@ public class ScheduleGeneratorDTO {
         return penaltyWaitPeriod;
     }
 
-    public LocalDate getLastTransactionDate() {
-        return this.lastTransactionDate;
-    }
-
     public HolidayDetailDTO getHolidayDetailDTO() {
         return this.holidayDetailDTO;
     }
@@ -95,8 +96,13 @@ public class ScheduleGeneratorDTO {
         this.recalculateFrom = recalculateFrom;
     }
 
-    public void setLastTransactionDate(LocalDate lastTransactionDate) {
-        this.lastTransactionDate = lastTransactionDate;
+    public CalendarInstance getCompoundingCalendarInstance() {
+        return this.compoundingCalendarInstance;
+    }
+
+    
+    public FloatingRateDTO getFloatingRateDTO() {
+        return this.floatingRateDTO;
     }
 
 }
