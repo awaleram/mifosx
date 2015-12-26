@@ -16,6 +16,9 @@ import static org.mifosplatform.portfolio.savings.SavingsApiConstants.transactio
 import static org.mifosplatform.portfolio.savings.SavingsApiConstants.transactionAmountParamName;
 import static org.mifosplatform.portfolio.savings.SavingsApiConstants.transactionDateParamName;
 import static org.mifosplatform.portfolio.savings.SavingsApiConstants.withdrawBalanceParamName;
+import static org.mifosplatform.portfolio.savings.SavingsApiConstants.overdraftLimitParamName;
+import static org.mifosplatform.portfolio.savings.SavingsApiConstants.onHoldFundChangeParamName;
+import static org.mifosplatform.portfolio.savings.SavingsApiConstants.onHoldFundsParamName;
 
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -28,13 +31,19 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.joda.time.LocalDate;
+import org.mifosplatform.commands.domain.CommandWrapper;
+import org.mifosplatform.commands.service.CommandWrapperBuilder;
+import org.mifosplatform.commands.service.PortfolioCommandSourceWritePlatformService;
 import org.mifosplatform.infrastructure.core.api.JsonCommand;
 import org.mifosplatform.infrastructure.core.data.ApiParameterError;
+import org.mifosplatform.infrastructure.core.data.CommandProcessingResult;
 import org.mifosplatform.infrastructure.core.data.DataValidatorBuilder;
 import org.mifosplatform.infrastructure.core.exception.InvalidJsonException;
 import org.mifosplatform.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.mifosplatform.infrastructure.core.serialization.FromJsonHelper;
+import org.mifosplatform.infrastructure.security.service.PlatformSecurityContext;
 import org.mifosplatform.portfolio.savings.SavingsApiConstants;
+import org.mifosplatform.useradministration.domain.AppUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -45,10 +54,16 @@ import com.google.gson.reflect.TypeToken;
 public class SavingsAccountTransactionDataValidator {
 
     private final FromJsonHelper fromApiJsonHelper;
+    private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
+    private final PlatformSecurityContext context;
 
     @Autowired
-    public SavingsAccountTransactionDataValidator(final FromJsonHelper fromApiJsonHelper) {
+    public SavingsAccountTransactionDataValidator(final FromJsonHelper fromApiJsonHelper, 
+    		final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService,
+    		final PlatformSecurityContext context) {
         this.fromApiJsonHelper = fromApiJsonHelper;
+        this.commandsSourceWritePlatformService = commandsSourceWritePlatformService;
+        this.context = context;
     }
 
     public void validate(final JsonCommand command) {
@@ -78,6 +93,68 @@ public class SavingsAccountTransactionDataValidator {
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 
+    public void validateForSetLimit(final JsonCommand command){
+    	
+    	final String json = command.json();
+    	if(StringUtils.isBlank(json)){
+    		throw new InvalidJsonException();
+    	}
+ 
+    	final Type typeOfMap = new TypeToken<Map<String,Object>>(){}.getType();
+    	this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, SavingsApiConstants.SAVINGS_ACCOUNT_SET_LIMIT_REQUEST_DATA_PARAMETERS);
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+        .resource(SavingsApiConstants.SAVINGS_ACCOUNT_TRANSACTION_RESOURCE_NAME);
+    	
+    	final JsonElement element = command.parsedJson();
+    	
+    	
+        final BigDecimal overDraftLimit = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(overdraftLimitParamName, element);
+        baseDataValidator.reset().parameter(overdraftLimitParamName).value(overDraftLimit).positiveAmount();
+        
+        final BigDecimal onHoldFunds = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(onHoldFundsParamName, element);
+        baseDataValidator.reset().parameter(onHoldFundsParamName).value(onHoldFunds).positiveAmount();
+        
+        
+        final BigDecimal onHoldFundChange = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(onHoldFundChangeParamName, element);
+        baseDataValidator.reset().parameter(onHoldFundChangeParamName).value(onHoldFundChange);
+        
+        
+        
+    	if(overDraftLimit !=null){
+    
+    		 final CommandWrapper wrapper = new CommandWrapperBuilder() //
+             .setOverDraftLimit() //
+             .build(); //
+    		 
+    		this.context.authenticatedUser(wrapper).validateHasPermissionTo(wrapper.getTaskPermissionName());
+
+    		
+    	}
+    	
+    	if(onHoldFunds != null){
+    		final CommandWrapper wrapper = new CommandWrapperBuilder()
+    		.setOnHoldFunds() //
+    		.build();
+    		this.context.authenticatedUser(wrapper).validateHasPermissionTo(wrapper.getTaskPermissionName());
+
+    	}
+    	
+    	
+    	if(onHoldFundChange != null){
+    		final CommandWrapper wrapper = new CommandWrapperBuilder()
+    		.setOnHoldFunds() //
+    		.build();
+    	    this.context.authenticatedUser(wrapper).validateHasPermissionTo(wrapper.getTaskPermissionName());
+
+    	}
+    	
+    	throwExceptionIfValidationWarningsExist(dataValidationErrors);
+    	
+    	
+    }
+    
     public void validateActivation(final JsonCommand command) {
         final String json = command.json();
 

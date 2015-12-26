@@ -294,9 +294,12 @@ public class SavingsAccountsApiResource {
             final String apiRequestBodyAsJson){
     	
     	  String jsonApiRequest = apiRequestBodyAsJson;
-    	  final CommandWrapperBuilder builder = new CommandWrapperBuilder().withJson(jsonApiRequest);
     	  
-          return null;
+          final CommandWrapper commandRequest = new CommandWrapperBuilder().setLimitsToSavingAccount(accountId).withJson(jsonApiRequest).build();
+
+          final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+          
+          return this.toApiJsonSerializer.serialize(result);
     }
     
     

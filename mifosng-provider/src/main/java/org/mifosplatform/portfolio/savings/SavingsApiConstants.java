@@ -143,7 +143,11 @@ public class SavingsApiConstants {
     public static final String onHoldTransactionTypeParamName = "transactionType";
     public static final String onHoldTransactionDateParamName = "transactionDate";
     public static final String onHoldReversedParamName = "reversed";
-
+    
+    // Saving set limits 
+    public static final String onHoldFundChangeParamName = "onHoldFundChange";
+    
+    
     public static final Set<String> SAVINGS_PRODUCT_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName,
             monthDayFormatParamName, nameParamName, shortNameParamName, descriptionParamName, currencyCodeParamName,
             digitsAfterDecimalParamName, inMultiplesOfParamName, nominalAnnualInterestRateParamName,
@@ -233,4 +237,7 @@ public class SavingsApiConstants {
 
     public static final Set<String> SAVINGS_ACCOUNT_ON_HOLD_RESPONSE_DATA_PARAMETERS = new HashSet<>(Arrays.asList(idParamName,
             amountParamName, onHoldTransactionTypeParamName, onHoldTransactionDateParamName, onHoldReversedParamName));
+    
+    public static final Set<String> SAVINGS_ACCOUNT_SET_LIMIT_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName,
+    		onHoldFundsParamName,overdraftLimitParamName,onHoldFundChangeParamName));
 }

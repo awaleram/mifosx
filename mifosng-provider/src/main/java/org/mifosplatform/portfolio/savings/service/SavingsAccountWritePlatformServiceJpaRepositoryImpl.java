@@ -68,6 +68,7 @@ import org.mifosplatform.portfolio.savings.exception.SavingsOfficerAssignmentExc
 import org.mifosplatform.portfolio.savings.exception.SavingsOfficerUnassignmentException;
 import org.mifosplatform.portfolio.savings.exception.TransactionUpdateNotAllowedException;
 import org.mifosplatform.useradministration.domain.AppUser;
+import org.mifosplatform.useradministration.domain.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -1189,5 +1190,34 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         }
         return user;
     }
+
+    
+    
+	@Override
+	public CommandProcessingResult setLimitsForSavingAccount(
+			Long savingsAccountId, JsonCommand command) {
+		
+		//this function for setting the on hold amount and overdraftLimit manually by the user
+		// with having some permission 
+		
+         this.context.authenticatedUser();
+	  
+         this.savingsAccountTransactionDataValidator.validateForSetLimit(command);
+       
+	     final SavingsAccount savingAccount =this.savingsRepository.findOneWithNotFoundDetection(savingsAccountId);
+	     final BigDecimal overDraftLimit = command.bigDecimalValueOfParameterNamed("overDraftLimit");
+	     final BigDecimal onHoldFunds = command.bigDecimalValueOfParameterNamed("onHoldFunds");
+	     final BigDecimal onHoldFundChange = command.bigDecimalValueOfParameterNamed("onHoldFundChange");
+         
+	     savingAccount.setLimitToSavingAccount(overDraftLimit, onHoldFunds, onHoldFundChange);
+	     
+	     this.savingAccountRepository.saveAndFlush(savingAccount);
+	     
+	    
+	     return new CommandProcessingResultBuilder()
+	     .withCommandId(command.commandId())
+	     .build();
+		
+	}
 
 }

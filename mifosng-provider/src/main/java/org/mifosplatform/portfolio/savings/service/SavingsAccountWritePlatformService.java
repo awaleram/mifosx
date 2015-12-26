@@ -66,4 +66,6 @@ public interface SavingsAccountWritePlatformService {
             Set<Long> existingReversedTransactionIds);
 
     void postInterest(SavingsAccount account);
+    
+    CommandProcessingResult setLimitsForSavingAccount(Long savingsAccountId, JsonCommand command);
 }

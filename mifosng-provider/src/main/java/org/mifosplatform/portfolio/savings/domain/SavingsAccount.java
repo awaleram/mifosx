@@ -2518,4 +2518,24 @@ public class SavingsAccount extends AbstractPersistable<Long> {
     public BigDecimal getWithdrawableBalance() {
         return getAccountBalance().subtract(minRequiredBalanceDerived(getCurrency()).getAmount()).subtract(this.getOnHoldFunds());
     }
+    
+    public void setLimitToSavingAccount(final BigDecimal overDraftLimit, final BigDecimal onHoldFunds, final BigDecimal onHoldFundChange){
+    	
+    	BigDecimal tempOnHoldFunds = BigDecimal.ZERO;
+    	
+       if(!(overDraftLimit == null) ){	
+          
+           this.overdraftLimit = overDraftLimit;
+       }
+       if(!(onHoldFunds == null)){
+    	   this.onHoldFunds = onHoldFunds;
+       }
+       
+       
+       if(!(onHoldFundChange == null)){
+    	   tempOnHoldFunds = this.onHoldFunds.add(onHoldFundChange);
+    	   this.onHoldFunds = tempOnHoldFunds;
+       }
+        		 
+    }
 }

@@ -415,6 +415,18 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder setOverDraftLimit(){
+    	this.actionName = "SET_OD_LIMIT";
+    	this.entityName = "SAVINGSACCOUNT";
+    	return this;
+    }
+    
+    public CommandWrapperBuilder setOnHoldFunds(){
+    	this.actionName = "SET_ON_HOLD_FUND";
+    	this.entityName = "SAVINGSACCOUNTS";
+    	return this;
+    }
+    
     public CommandWrapperBuilder activateClient(final Long clientId) {
         this.actionName = "ACTIVATE";
         this.entityName = "CLIENT";
@@ -1014,6 +1026,14 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder setLimitsToSavingAccount(final Long accountId){
+    	this.actionName = "SET_LIMIT";
+    	this.entityName = "SAVINGSACCOUNT";
+    	this.entityId = accountId;
+    	this.href = "/savingsaccounts/" + accountId + "/setLimits";
+    	return this;
+    }
+    
     public CommandWrapperBuilder rejectSavingsAccountApplication(final Long accountId) {
         this.actionName = "REJECT";
         this.entityName = "SAVINGSACCOUNT";
