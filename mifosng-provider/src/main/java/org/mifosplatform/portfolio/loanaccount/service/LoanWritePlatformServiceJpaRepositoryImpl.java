@@ -1801,8 +1801,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         	
             if(chargeAmount.intValue() > 0 ){
             	loanCharge.markAsFullyPaid();
+            	final Money zero = Money.zero(loan.getCurrency());
             	final LoanChargePaidBy loanChargePaidBy = new LoanChargePaidBy(chargePayment, loanCharge, chargeAmount, installmentNumber);
             	chargePayment.getLoanChargesPaid().add(loanChargePaidBy);
+            	
+            	chargePayment.updateComponentsAndTotal(zero, zero, disbursentMoney, zero);
+            	chargePayment.updateLoan(loan);
+            	chargePayment.updateOutstandingLoanBalance(loan.getProposedPrincipal());
             }        
             this.loanTransactionRepository.saveAndFlush(chargePayment);
             this.loanChargeRepository.save(loanCharge);
