@@ -1762,7 +1762,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         saveLoanWithDataIntegrityViolationChecks(loan);
         this.businessEventNotifierService.notifyBusinessEventWasExecuted(BUSINESS_EVENTS.LOAN_DELETE_CHARGE,
                 constructEntityMap(BUSINESS_ENTITY.LOAN_CHARGE, loanCharge));
-        return new CommandProcessingResultBuilder() //
+        	return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
                 .withEntityId(loanChargeId) //
                 .withOfficeId(loan.getOfficeId()) //
@@ -1782,6 +1782,8 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             loanChargeId = command.longValueOfParameterNamed("chargeId");
         }
         final Loan loan = this.loanAssembler.assembleFrom(loanId);
+        final List<Long> existingTransactionIds = new ArrayList<>(loan.findExistingTransactionIds());
+        final List<Long> existingReversedTransactionIds = new ArrayList<>(loan.findExistingReversedTransactionIds());
         checkClientOrGroupActive(loan);
         final LoanCharge loanCharge = retrieveLoanChargeBy(loanId, loanChargeId);
         AppUser currentUser = getAppUserIfPresent();
@@ -1808,7 +1810,11 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             	chargePayment.updateComponentsAndTotal(zero, zero, disbursentMoney, zero);
             	chargePayment.updateLoan(loan);
             	chargePayment.updateOutstandingLoanBalance(loan.getProposedPrincipal());
+            	
             }        
+            
+            postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
+
             this.loanTransactionRepository.saveAndFlush(chargePayment);
             this.loanChargeRepository.save(loanCharge);
         	}else{
